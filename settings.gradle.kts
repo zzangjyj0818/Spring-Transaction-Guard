@@ -12,4 +12,5 @@ include(
     "transaction-guard-spring",
     "transaction-guard-spring-boot-autoconfigure",
     "transaction-guard-spring-boot-starter",
+    "transaction-guard-example",
 )
