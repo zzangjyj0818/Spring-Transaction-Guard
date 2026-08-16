@@ -80,12 +80,55 @@ class TransactionObservationTest {
                 List.of(new CapturingPolicy()),
                 violations -> {
                     throw new IllegalStateException("reporter failure");
-                }
+                },
+                true
         );
         observation.observe(entryPoint());
 
         assertThrows(IllegalStateException.class,
-                () -> complete(TransactionSynchronization.STATUS_COMMITTED));
+                this::beforeCommit);
+        complete(TransactionSynchronization.STATUS_ROLLED_BACK);
+        assertTrue(registry.currentContext().isEmpty());
+    }
+
+    @Test
+    void suppressesReporterFailureInDefaultFailSafeMode() {
+        TransactionObservation observation = new TransactionObservation(
+                new ActualTransactionDetector(),
+                registry,
+                new SequenceClock(10, 20),
+                () -> "tx-test",
+                List.of(new CapturingPolicy()),
+                violations -> {
+                    throw new IllegalStateException("reporter failure");
+                },
+                false
+        );
+        observation.observe(entryPoint());
+
+        complete(TransactionSynchronization.STATUS_COMMITTED);
+
+        assertTrue(registry.currentContext().isEmpty());
+    }
+
+    @Test
+    void suppressesPolicyFailureInDefaultFailSafeMode() {
+        TransactionObservation observation = new TransactionObservation(
+                new ActualTransactionDetector(),
+                registry,
+                new SequenceClock(10, 20),
+                () -> "tx-test",
+                List.of(snapshot -> {
+                    throw new IllegalStateException("policy failure");
+                }),
+                violations -> {
+                },
+                false
+        );
+        observation.observe(entryPoint());
+
+        complete(TransactionSynchronization.STATUS_COMMITTED);
+
         assertTrue(registry.currentContext().isEmpty());
     }
 
@@ -97,7 +140,8 @@ class TransactionObservationTest {
                 () -> "tx-test",
                 List.of(policy),
                 violations -> {
-                }
+                },
+                false
         );
     }
 
@@ -105,6 +149,12 @@ class TransactionObservationTest {
         List<TransactionSynchronization> synchronizations =
                 new ArrayList<>(TransactionSynchronizationManager.getSynchronizations());
         synchronizations.forEach(synchronization -> synchronization.afterCompletion(status));
+    }
+
+    private void beforeCommit() {
+        List<TransactionSynchronization> synchronizations =
+                new ArrayList<>(TransactionSynchronizationManager.getSynchronizations());
+        synchronizations.forEach(synchronization -> synchronization.beforeCommit(false));
     }
 
     private TransactionEntryPoint entryPoint() {

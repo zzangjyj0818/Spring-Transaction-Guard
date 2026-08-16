@@ -956,24 +956,24 @@ Assertions:
 
 다음 항목을 모두 만족해야 v0.1.0 완료로 본다.
 
-- [ ] Starter dependency 하나로 Auto Configuration이 활성화된다.
-- [ ] 실제 Spring transaction 내부에서 Guard Context가 생성된다.
-- [ ] 트랜잭션이 없는 요청에서는 Guard가 작동하지 않는다.
-- [ ] Transaction duration을 정확하게 측정한다.
-- [ ] `max-duration` 초과 시 TG001이 생성된다.
-- [ ] RestClient 호출이 transaction 내부에서 발생하면 TG002가 생성된다.
-- [ ] 느린 RestClient 호출에서 TG003이 생성된다.
-- [ ] RestClient 호출이 transaction 밖에서 발생하면 TG002/TG003이 생성되지 않는다.
-- [ ] LOG 모드에서 비즈니스 실행을 방해하지 않는다.
-- [ ] THROW 모드에서 `TransactionGuardViolationException`을 발생시킬 수 있다.
-- [ ] REQUIRED nested transaction에서 context가 중복 생성되지 않는다.
-- [ ] REQUIRES_NEW에서 outer/inner context가 섞이지 않는다.
-- [ ] rollback 시 outcome이 올바르게 기록된다.
-- [ ] 동시에 수행되는 transaction 간 context가 섞이지 않는다.
-- [ ] query parameter, header, body 등 민감 데이터가 기본 로그에 기록되지 않는다.
-- [ ] 사용자 custom Reporter를 등록할 수 있다.
-- [ ] 모든 Core/Integration test가 통과한다.
-- [ ] Example application으로 TG001/TG002/TG003을 재현할 수 있다.
+- [x] Starter dependency 하나로 Auto Configuration이 활성화된다.
+- [x] 실제 Spring transaction 내부에서 Guard Context가 생성된다.
+- [x] 트랜잭션이 없는 요청에서는 Guard가 작동하지 않는다.
+- [x] Transaction duration을 정확하게 측정한다.
+- [x] `max-duration` 초과 시 TG001이 생성된다.
+- [x] RestClient 호출이 transaction 내부에서 발생하면 TG002가 생성된다.
+- [x] 느린 RestClient 호출에서 TG003이 생성된다.
+- [x] RestClient 호출이 transaction 밖에서 발생하면 TG002/TG003이 생성되지 않는다.
+- [x] LOG 모드에서 비즈니스 실행을 방해하지 않는다.
+- [x] THROW 모드에서 `TransactionGuardViolationException`을 발생시킬 수 있다.
+- [x] REQUIRED nested transaction에서 context가 중복 생성되지 않는다.
+- [x] REQUIRES_NEW에서 outer/inner context가 섞이지 않는다.
+- [x] rollback 시 outcome이 올바르게 기록된다.
+- [x] 동시에 수행되는 transaction 간 context가 섞이지 않는다.
+- [x] query parameter, header, body 등 민감 데이터가 기본 로그에 기록되지 않는다.
+- [x] 사용자 custom Reporter를 등록할 수 있다.
+- [x] 모든 Core/Integration test가 통과한다.
+- [x] Example application으로 TG001/TG002/TG003을 재현할 수 있다.
 
 ---
 

@@ -23,12 +23,22 @@ Reactive transaction과 `WebClient`는 v0.1 지원 범위에 포함되지 않습
 
 ## 설치
 
-아직 원격 저장소에 배포되지 않은 개발 버전입니다. 이 저장소를 함께 빌드할 때 애플리케이션에 Starter 하나만 추가합니다.
+Maven Central에 게시된 Starter 하나만 추가합니다.
 
 ```kotlin
 dependencies {
-    implementation(project(":transaction-guard-spring-boot-starter"))
+    implementation("io.github.zzangjyj0818:transaction-guard-spring-boot-starter:0.1.0")
 }
+```
+
+Maven:
+
+```xml
+<dependency>
+  <groupId>io.github.zzangjyj0818</groupId>
+  <artifactId>transaction-guard-spring-boot-starter</artifactId>
+  <version>0.1.0</version>
+</dependency>
 ```
 
 Starter를 추가하면 별도 `@Enable...` 애노테이션 없이 자동 설정됩니다.
@@ -59,10 +69,16 @@ transaction-guard:
 
 ## LOG와 THROW
 
-- `LOG`는 기본값이며 구조화된 WARN 로그를 남기고 비즈니스 실행을 의도적으로 중단하지 않습니다.
-- `THROW`는 위반 목록을 담은 `TransactionGuardViolationException`을 발생시키는 테스트/CI용 선택 기능입니다. 트랜잭션 완료 콜백에서 실행되므로 사용하는 트랜잭션 매니저가 완료 콜백 예외를 어떻게 전달하는지 반드시 통합 테스트로 확인해야 합니다.
+- `LOG`는 기본값이며 실제 transaction completion 이후 구조화된 WARN 로그를 남깁니다. Policy나 Reporter 자체가 실패해도 진단 ERROR 로그만 남기고 비즈니스 실행을 유지합니다.
+- `THROW`는 commit 직전에 정책을 평가하고 위반 목록을 담은 `TransactionGuardViolationException`을 발생시킵니다. 예외가 commit을 중단하므로 테스트/CI에서 트랜잭션 위험을 강제하는 용도로 사용합니다.
 
 운영 환경에서는 `LOG` 사용을 권장합니다.
+
+## 호환성
+
+| Spring Transaction Guard | Java | Spring Boot | Spring Framework |
+|---|---:|---:|---:|
+| 0.1.x | 21+ | 4.1.x | 7.0.x |
 
 ## RestClient 사용 시 주의점
 
