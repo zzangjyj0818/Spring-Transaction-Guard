@@ -3,7 +3,9 @@ package io.github.zzangjyj0818.transactionguard.autoconfigure;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /** Configuration properties for Spring Transaction Guard. */
 @ConfigurationProperties("transaction-guard")
@@ -94,6 +96,10 @@ public final class TransactionGuardProperties {
     public static final class ExternalCall {
         private boolean enabled = true;
         private Duration slowThreshold = Duration.ofSeconds(1);
+        private List<String> ignoreHosts = List.of();
+        private List<String> ignoreEndpoints = List.of();
+        private List<String> allowHosts = List.of();
+        private List<String> allowEndpoints = List.of();
 
         /** Creates external call settings with the documented defaults. */
         public ExternalCall() {
@@ -134,11 +140,52 @@ public final class TransactionGuardProperties {
         public void setSlowThreshold(Duration slowThreshold) {
             this.slowThreshold = requireNonNegative(slowThreshold, "slowThreshold");
         }
+
+        /** Returns host patterns that must not be recorded. */
+        public List<String> getIgnoreHosts() {
+            return ignoreHosts;
+        }
+
+        /** Sets host patterns that must not be recorded. */
+        public void setIgnoreHosts(List<String> ignoreHosts) {
+            this.ignoreHosts = requirePatterns(ignoreHosts, "ignoreHosts");
+        }
+
+        /** Returns endpoint patterns that must not be recorded. */
+        public List<String> getIgnoreEndpoints() {
+            return ignoreEndpoints;
+        }
+
+        /** Sets endpoint patterns that must not be recorded. */
+        public void setIgnoreEndpoints(List<String> ignoreEndpoints) {
+            this.ignoreEndpoints = requirePatterns(ignoreEndpoints, "ignoreEndpoints");
+        }
+
+        /** Returns host patterns whose calls are observed but allowed. */
+        public List<String> getAllowHosts() {
+            return allowHosts;
+        }
+
+        /** Sets host patterns whose calls are observed but allowed. */
+        public void setAllowHosts(List<String> allowHosts) {
+            this.allowHosts = requirePatterns(allowHosts, "allowHosts");
+        }
+
+        /** Returns endpoint patterns whose calls are observed but allowed. */
+        public List<String> getAllowEndpoints() {
+            return allowEndpoints;
+        }
+
+        /** Sets endpoint patterns whose calls are observed but allowed. */
+        public void setAllowEndpoints(List<String> allowEndpoints) {
+            this.allowEndpoints = requirePatterns(allowEndpoints, "allowEndpoints");
+        }
     }
 
     /** Violation reporting settings. */
     public static final class Violation {
         private Mode mode = Mode.LOG;
+        private Set<ViolationCode> disabledCodes = Set.of();
 
         /** Creates violation settings with the documented defaults. */
         public Violation() {
@@ -161,6 +208,27 @@ public final class TransactionGuardProperties {
         public void setMode(Mode mode) {
             this.mode = Objects.requireNonNull(mode, "mode must not be null");
         }
+
+        /** Returns stable violation codes disabled by configuration. */
+        public Set<ViolationCode> getDisabledCodes() {
+            return disabledCodes;
+        }
+
+        /** Sets stable violation codes disabled by configuration. */
+        public void setDisabledCodes(Set<ViolationCode> disabledCodes) {
+            this.disabledCodes = Set.copyOf(Objects.requireNonNull(
+                    disabledCodes, "disabledCodes must not be null"));
+        }
+    }
+
+    /** Stable violation codes accepted by configuration binding. */
+    public enum ViolationCode {
+        /** Long transaction. */
+        TG001,
+        /** External HTTP call inside a transaction. */
+        TG002,
+        /** Slow external HTTP call inside a transaction. */
+        TG003
     }
 
     /** Supported violation reporting modes. */
@@ -177,5 +245,21 @@ public final class TransactionGuardProperties {
             throw new IllegalArgumentException(name + " must not be negative");
         }
         return value;
+    }
+
+    private static List<String> requirePatterns(List<String> values, String name) {
+        Objects.requireNonNull(values, name + " must not be null");
+        return values.stream()
+                .map(value -> requirePattern(value, name))
+                .toList();
+    }
+
+    private static String requirePattern(String value, String name) {
+        Objects.requireNonNull(value, name + " must not contain null");
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException(name + " must not contain blank patterns");
+        }
+        return trimmed;
     }
 }

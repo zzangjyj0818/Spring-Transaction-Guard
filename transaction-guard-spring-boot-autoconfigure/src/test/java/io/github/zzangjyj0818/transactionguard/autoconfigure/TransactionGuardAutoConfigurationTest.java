@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -44,6 +45,11 @@ class TransactionGuardAutoConfigurationTest {
             assertTrue(properties.getExternalCall().isEnabled());
             assertEquals(Duration.ofSeconds(1), properties.getExternalCall().getSlowThreshold());
             assertEquals(TransactionGuardProperties.Mode.LOG, properties.getViolation().getMode());
+            assertEquals(List.of(), properties.getExternalCall().getIgnoreHosts());
+            assertEquals(List.of(), properties.getExternalCall().getIgnoreEndpoints());
+            assertEquals(List.of(), properties.getExternalCall().getAllowHosts());
+            assertEquals(List.of(), properties.getExternalCall().getAllowEndpoints());
+            assertEquals(Set.of(), properties.getViolation().getDisabledCodes());
         });
     }
 
@@ -75,6 +81,34 @@ class TransactionGuardAutoConfigurationTest {
     @Test
     void rejectsNegativeDurationConfiguration() {
         contextRunner.withPropertyValues("transaction-guard.transaction.max-duration=-1ms")
+                .run(context -> assertNotNull(context.getStartupFailure()));
+    }
+
+    @Test
+    void bindsPolicyControlProperties() {
+        contextRunner.withPropertyValues(
+                "transaction-guard.external-call.ignore-hosts[0]=metadata.internal",
+                "transaction-guard.external-call.ignore-endpoints[0]=health.internal/ready",
+                "transaction-guard.external-call.allow-hosts[0]=payments.internal",
+                "transaction-guard.external-call.allow-endpoints[0]=audit.internal/events/*",
+                "transaction-guard.violation.disabled-codes[0]=TG001",
+                "transaction-guard.violation.disabled-codes[1]=TG003"
+        ).run(context -> {
+            TransactionGuardProperties properties = context.getBean(TransactionGuardProperties.class);
+            assertEquals(List.of("metadata.internal"), properties.getExternalCall().getIgnoreHosts());
+            assertEquals(List.of("health.internal/ready"), properties.getExternalCall().getIgnoreEndpoints());
+            assertEquals(List.of("payments.internal"), properties.getExternalCall().getAllowHosts());
+            assertEquals(List.of("audit.internal/events/*"), properties.getExternalCall().getAllowEndpoints());
+            assertEquals(Set.of(
+                    TransactionGuardProperties.ViolationCode.TG001,
+                    TransactionGuardProperties.ViolationCode.TG003
+            ), properties.getViolation().getDisabledCodes());
+        });
+    }
+
+    @Test
+    void rejectsUnknownDisabledViolationCode() {
+        contextRunner.withPropertyValues("transaction-guard.violation.disabled-codes[0]=TG999")
                 .run(context -> assertNotNull(context.getStartupFailure()));
     }
 
