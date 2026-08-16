@@ -20,6 +20,7 @@ subprojects {
 
     dependencies {
         "implementation"(platform("org.springframework.boot:spring-boot-dependencies:$springBootVersion"))
+        "annotationProcessor"(platform("org.springframework.boot:spring-boot-dependencies:$springBootVersion"))
         "testImplementation"(platform("org.springframework.boot:spring-boot-dependencies:$springBootVersion"))
         "testImplementation"("org.junit.jupiter:junit-jupiter")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")

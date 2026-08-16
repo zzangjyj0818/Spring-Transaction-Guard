@@ -5,6 +5,7 @@ plugins {
 dependencies {
     api(project(":transaction-guard-core"))
     implementation("org.springframework:spring-aop")
+    implementation("org.springframework:spring-web")
     implementation("org.springframework:spring-tx")
     implementation("org.aspectj:aspectjweaver")
 
