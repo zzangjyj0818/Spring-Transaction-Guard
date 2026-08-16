@@ -10,6 +10,7 @@ Spring Transaction Guard는 실제 활성 DB 트랜잭션의 실행 시간과 �
 2. [설정 레퍼런스](configuration.md) — 전체 설정과 기본값
 3. [탐지 코드와 안전성](detection-and-safety.md) — TG001~TG003, LOG/THROW, 개인정보 처리
 4. [WebClient 지원 결정](webclient-support.md) — v0.2에서 자동 관측하지 않는 이유
+5. [관측성과 Prometheus](observability.md) — Micrometer 메트릭, Actuator endpoint, Prometheus 연동
 
 ## 지원 범위
 

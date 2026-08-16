@@ -11,3 +11,12 @@ transaction-guard:
     slow-threshold: 100ms
   violation:
     mode: log
+
+management:
+  endpoint:
+    transactionguard:
+      access: READ_ONLY
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,transactionguard

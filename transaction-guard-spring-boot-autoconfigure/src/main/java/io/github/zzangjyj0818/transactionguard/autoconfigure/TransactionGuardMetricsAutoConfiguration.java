@@ -10,7 +10,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 /** Optional Micrometer integration for Transaction Guard. */
-@AutoConfiguration(before = TransactionGuardAutoConfiguration.class)
+@AutoConfiguration(
+        before = TransactionGuardAutoConfiguration.class,
+        afterName = "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration")
 @ConditionalOnClass(MeterRegistry.class)
 @ConditionalOnBean(MeterRegistry.class)
 @ConditionalOnProperty(prefix = "transaction-guard", name = "enabled", havingValue = "true", matchIfMissing = true)
