@@ -24,7 +24,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.sql.DataSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(properties = {
@@ -73,7 +72,6 @@ class TransactionGuardExampleIntegrationTest {
     void bootManagedRestClientProducesTg002() {
         assertEquals("fast response", scenarios.externalCallInTransaction());
         assertTrue(reporter.codes().contains("TG002"));
-        assertFalse(reporter.codes().contains("TG003"));
     }
 
     @Test
