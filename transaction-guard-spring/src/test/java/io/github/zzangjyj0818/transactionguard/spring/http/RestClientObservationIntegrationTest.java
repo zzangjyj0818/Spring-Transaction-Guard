@@ -109,6 +109,21 @@ class RestClientObservationIntegrationTest {
     }
 
     @Test
+    void queryHeaderAndBodySecretsAreNotCaptured() {
+        service.postWithSecrets(
+                baseUrl + "/ok?access_token=query-secret",
+                "Bearer header-secret",
+                "{\"password\":\"body-secret\"}"
+        );
+        String snapshotText = onlySnapshot().toString();
+
+        assertFalse(snapshotText.contains("query-secret"));
+        assertFalse(snapshotText.contains("header-secret"));
+        assertFalse(snapshotText.contains("body-secret"));
+        assertEquals("/ok", onlySnapshot().externalCalls().getFirst().path());
+    }
+
+    @Test
     void callOutsideTransactionIsNotObserved() {
         assertEquals("ok", service.getWithoutTransaction(baseUrl + "/ok?token=SECRET"));
         assertTrue(policy.snapshots().isEmpty());
@@ -311,6 +326,16 @@ class RestClientObservationIntegrationTest {
         }
 
         @Transactional
+        void postWithSecrets(String url, String authorization, String body) {
+            client.post()
+                    .uri(url)
+                    .header("Authorization", authorization)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+        }
+
+        @Transactional
         void outerWithNotSupportedCall(String url) {
             nested.get(url);
         }
@@ -327,6 +352,7 @@ class RestClientObservationIntegrationTest {
         String get(String url) {
             return client.get().uri(url).retrieve().body(String.class);
         }
+
     }
 
     static final class CapturingPolicy implements TransactionGuardPolicy {

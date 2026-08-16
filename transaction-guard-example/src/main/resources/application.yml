@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: transaction-guard-example
+  datasource:
+    url: jdbc:h2:mem:transaction-guard-example
+
+transaction-guard:
+  transaction:
+    max-duration: 150ms
+  external-call:
+    slow-threshold: 100ms
+  violation:
+    mode: log
