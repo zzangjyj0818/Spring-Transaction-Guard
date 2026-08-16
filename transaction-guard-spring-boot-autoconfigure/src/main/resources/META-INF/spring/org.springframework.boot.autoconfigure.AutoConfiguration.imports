@@ -1,2 +1,3 @@
 io.github.zzangjyj0818.transactionguard.autoconfigure.TransactionGuardAutoConfiguration
+io.github.zzangjyj0818.transactionguard.autoconfigure.TransactionGuardMetricsAutoConfiguration
 io.github.zzangjyj0818.transactionguard.autoconfigure.TransactionGuardFeignAutoConfiguration

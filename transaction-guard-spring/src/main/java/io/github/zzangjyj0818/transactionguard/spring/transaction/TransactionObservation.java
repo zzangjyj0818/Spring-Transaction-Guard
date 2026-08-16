@@ -28,6 +28,7 @@ public final class TransactionObservation {
     private final Supplier<String> transactionIdGenerator;
     private final List<TransactionGuardPolicy> policies;
     private final TransactionGuardReporter reporter;
+    private final List<TransactionObservationListener> listeners;
     private final boolean propagateGuardFailures;
 
     /**
@@ -45,7 +46,7 @@ public final class TransactionObservation {
             TransactionGuardReporter reporter
     ) {
         this(transactionDetector, contextRegistry, MonotonicClock.system(),
-                () -> UUID.randomUUID().toString(), policies, reporter, false);
+                () -> UUID.randomUUID().toString(), policies, reporter, List.of(), false);
     }
 
     /**
@@ -65,7 +66,29 @@ public final class TransactionObservation {
             boolean propagateGuardFailures
     ) {
         this(transactionDetector, contextRegistry, MonotonicClock.system(),
-                () -> UUID.randomUUID().toString(), policies, reporter, propagateGuardFailures);
+                () -> UUID.randomUUID().toString(), policies, reporter, List.of(), propagateGuardFailures);
+    }
+
+    /**
+     * Creates a transaction observation with completion listeners.
+     *
+     * @param transactionDetector actual transaction detector
+     * @param contextRegistry transaction resource registry
+     * @param policies policies evaluated after completion
+     * @param reporter violation reporter
+     * @param listeners completion listeners such as metrics recorders
+     * @param propagateGuardFailures whether policy and reporter failures should be propagated
+     */
+    public TransactionObservation(
+            ActualTransactionDetector transactionDetector,
+            TransactionGuardContextRegistry contextRegistry,
+            List<TransactionGuardPolicy> policies,
+            TransactionGuardReporter reporter,
+            List<TransactionObservationListener> listeners,
+            boolean propagateGuardFailures
+    ) {
+        this(transactionDetector, contextRegistry, MonotonicClock.system(),
+                () -> UUID.randomUUID().toString(), policies, reporter, listeners, propagateGuardFailures);
     }
 
     TransactionObservation(
@@ -77,6 +100,20 @@ public final class TransactionObservation {
             TransactionGuardReporter reporter,
             boolean propagateGuardFailures
     ) {
+        this(transactionDetector, contextRegistry, clock, transactionIdGenerator,
+                policies, reporter, List.of(), propagateGuardFailures);
+    }
+
+    TransactionObservation(
+            ActualTransactionDetector transactionDetector,
+            TransactionGuardContextRegistry contextRegistry,
+            MonotonicClock clock,
+            Supplier<String> transactionIdGenerator,
+            List<TransactionGuardPolicy> policies,
+            TransactionGuardReporter reporter,
+            List<TransactionObservationListener> listeners,
+            boolean propagateGuardFailures
+    ) {
         this.transactionDetector = Objects.requireNonNull(transactionDetector, "transactionDetector must not be null");
         this.contextRegistry = Objects.requireNonNull(contextRegistry, "contextRegistry must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
@@ -84,6 +121,7 @@ public final class TransactionObservation {
                 transactionIdGenerator, "transactionIdGenerator must not be null");
         this.policies = List.copyOf(Objects.requireNonNull(policies, "policies must not be null"));
         this.reporter = Objects.requireNonNull(reporter, "reporter must not be null");
+        this.listeners = List.copyOf(Objects.requireNonNull(listeners, "listeners must not be null"));
         this.propagateGuardFailures = propagateGuardFailures;
     }
 
@@ -169,7 +207,23 @@ public final class TransactionObservation {
                 violations.addAll(Objects.requireNonNull(
                         policy.evaluate(snapshot), "policy result must not be null"));
             }
-            reporter.report(List.copyOf(violations));
+            List<TransactionGuardViolation> immutableViolations = List.copyOf(violations);
+            notifyListeners(snapshot, immutableViolations);
+            reporter.report(immutableViolations);
+        }
+
+        private void notifyListeners(
+                TransactionSnapshot snapshot,
+                List<TransactionGuardViolation> violations
+        ) {
+            for (TransactionObservationListener listener : listeners) {
+                try {
+                    listener.onCompleted(snapshot, violations);
+                } catch (RuntimeException | Error listenerFailure) {
+                    LOGGER.warn("Transaction Guard completion listener failed; business flow is preserved",
+                            listenerFailure);
+                }
+            }
         }
 
         private TransactionOutcome outcome(int status) {

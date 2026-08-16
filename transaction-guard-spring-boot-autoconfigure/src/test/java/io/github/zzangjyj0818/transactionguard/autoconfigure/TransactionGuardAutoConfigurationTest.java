@@ -13,6 +13,8 @@ import io.github.zzangjyj0818.transactionguard.core.reporter.TransactionGuardRep
 import io.github.zzangjyj0818.transactionguard.spring.aop.TransactionGuardAspect;
 import io.github.zzangjyj0818.transactionguard.spring.http.TransactionGuardHttpInterceptor;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservation;
+import io.github.zzangjyj0818.transactionguard.autoconfigure.metrics.TransactionGuardMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.restclient.autoconfigure.RestClientAutoConfiguration;
@@ -180,6 +182,33 @@ class TransactionGuardAutoConfigurationTest {
                     assertFalse(context.getBeansOfType(org.springframework.web.client.RestClient.Builder.class)
                             .isEmpty());
                 });
+    }
+
+    @Test
+    void createsMetricsListenerOnlyWhenMeterRegistryBeanExists() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        TransactionGuardMetricsAutoConfiguration.class,
+                        TransactionGuardAutoConfiguration.class))
+                .withBean(SimpleMeterRegistry.class, SimpleMeterRegistry::new)
+                .run(context -> assertEquals(1, context.getBeansOfType(TransactionGuardMetrics.class).size()));
+
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        TransactionGuardMetricsAutoConfiguration.class,
+                        TransactionGuardAutoConfiguration.class))
+                .run(context -> assertTrue(context.getBeansOfType(TransactionGuardMetrics.class).isEmpty()));
+    }
+
+    @Test
+    void doesNotCreateMetricsListenerWhenGuardIsDisabled() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        TransactionGuardMetricsAutoConfiguration.class,
+                        TransactionGuardAutoConfiguration.class))
+                .withBean(SimpleMeterRegistry.class, SimpleMeterRegistry::new)
+                .withPropertyValues("transaction-guard.enabled=false")
+                .run(context -> assertTrue(context.getBeansOfType(TransactionGuardMetrics.class).isEmpty()));
     }
 
     @Configuration(proxyBeanMethods = false)
