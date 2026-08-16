@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Private product specification (kept only in the local working tree)
+/docs/SPEC.md
