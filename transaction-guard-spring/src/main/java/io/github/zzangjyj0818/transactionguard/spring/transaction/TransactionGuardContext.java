@@ -1,6 +1,7 @@
 package io.github.zzangjyj0818.transactionguard.spring.transaction;
 
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallObservation;
+import io.github.zzangjyj0818.transactionguard.core.model.RedisOperationObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionEntryPoint;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionOutcome;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionSnapshot;
@@ -18,6 +19,7 @@ public final class TransactionGuardContext {
     private final TransactionEntryPoint entryPoint;
     private final String threadName;
     private final List<ExternalCallObservation> externalCalls = new ArrayList<>();
+    private final List<RedisOperationObservation> redisOperations = new ArrayList<>();
 
     TransactionGuardContext(
             String transactionId,
@@ -70,6 +72,15 @@ public final class TransactionGuardContext {
         externalCalls.add(Objects.requireNonNull(observation, "observation must not be null"));
     }
 
+    /**
+     * Adds a privacy-safe Redis operation observation to this transaction.
+     *
+     * @param observation Redis operation observation
+     */
+    public void addRedisOperation(RedisOperationObservation observation) {
+        redisOperations.add(Objects.requireNonNull(observation, "observation must not be null"));
+    }
+
     TransactionSnapshot snapshot(long completedAtNanos, TransactionOutcome outcome) {
         long elapsedNanos = completedAtNanos >= startedAtNanos
                 ? completedAtNanos - startedAtNanos
@@ -79,7 +90,8 @@ public final class TransactionGuardContext {
                 entryPoint,
                 Duration.ofNanos(elapsedNanos),
                 outcome,
-                externalCalls
+                externalCalls,
+                redisOperations
         );
     }
 }

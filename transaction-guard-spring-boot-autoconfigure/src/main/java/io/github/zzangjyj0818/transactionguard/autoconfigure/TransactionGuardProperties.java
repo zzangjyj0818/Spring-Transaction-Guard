@@ -14,6 +14,7 @@ public final class TransactionGuardProperties {
     private boolean enabled = true;
     private final Transaction transaction = new Transaction();
     private final ExternalCall externalCall = new ExternalCall();
+    private final Redis redis = new Redis();
     private final Violation violation = new Violation();
 
     /** Creates properties initialized with the documented defaults. */
@@ -54,6 +55,11 @@ public final class TransactionGuardProperties {
      */
     public ExternalCall getExternalCall() {
         return externalCall;
+    }
+
+    /** Returns Redis observation settings. */
+    public Redis getRedis() {
+        return redis;
     }
 
     /**
@@ -182,6 +188,28 @@ public final class TransactionGuardProperties {
         }
     }
 
+    /** Imperative Redis observation settings. */
+    public static final class Redis {
+        private boolean enabled = true;
+        private Duration slowThreshold = Duration.ofSeconds(1);
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public Duration getSlowThreshold() {
+            return slowThreshold;
+        }
+
+        public void setSlowThreshold(Duration slowThreshold) {
+            this.slowThreshold = requireNonNegative(slowThreshold, "slowThreshold");
+        }
+    }
+
     /** Violation reporting settings. */
     public static final class Violation {
         private Mode mode = Mode.LOG;
@@ -228,7 +256,11 @@ public final class TransactionGuardProperties {
         /** External HTTP call inside a transaction. */
         TG002,
         /** Slow external HTTP call inside a transaction. */
-        TG003
+        TG003,
+        /** Redis operation inside a transaction. */
+        TG004,
+        /** Slow Redis operation inside a transaction. */
+        TG005
     }
 
     /** Supported violation reporting modes. */

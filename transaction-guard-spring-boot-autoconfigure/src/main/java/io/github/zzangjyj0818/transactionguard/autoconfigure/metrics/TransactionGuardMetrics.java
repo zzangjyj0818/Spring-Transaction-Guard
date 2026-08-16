@@ -1,6 +1,7 @@
 package io.github.zzangjyj0818.transactionguard.autoconfigure.metrics;
 
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallObservation;
+import io.github.zzangjyj0818.transactionguard.core.model.RedisOperationObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionGuardViolation;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionSnapshot;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservationListener;
@@ -19,6 +20,8 @@ public final class TransactionGuardMetrics implements TransactionObservationList
     public static final String VIOLATION_TOTAL = "transaction.guard.violation.total";
     public static final String EXTERNAL_HTTP_DURATION = "transaction.guard.external.http.duration";
     public static final String EXTERNAL_HTTP_TOTAL = "transaction.guard.external.http.total";
+    public static final String REDIS_DURATION = "transaction.guard.redis.duration";
+    public static final String REDIS_TOTAL = "transaction.guard.redis.total";
 
     private final MeterRegistry registry;
 
@@ -45,6 +48,14 @@ public final class TransactionGuardMetrics implements TransactionObservationList
             registry.timer(EXTERNAL_HTTP_DURATION, tags)
                     .record(call.durationNanos(), TimeUnit.NANOSECONDS);
             registry.counter(EXTERNAL_HTTP_TOTAL, tags).increment();
+        }
+        for (RedisOperationObservation operation : snapshot.redisOperations()) {
+            Tags tags = Tags.of(
+                    "command_category", tag(operation.commandCategory()),
+                    "outcome", tag(operation.outcome()));
+            registry.timer(REDIS_DURATION, tags)
+                    .record(operation.durationNanos(), TimeUnit.NANOSECONDS);
+            registry.counter(REDIS_TOTAL, tags).increment();
         }
     }
 

@@ -12,14 +12,31 @@ import java.util.Objects;
  * @param duration transaction duration measured with a monotonic clock
  * @param outcome final transaction outcome
  * @param externalCalls immutable external calls observed inside the transaction
+ * @param redisOperations immutable Redis operations observed inside the transaction
  */
 public record TransactionSnapshot(
         String transactionId,
         TransactionEntryPoint entryPoint,
         Duration duration,
         TransactionOutcome outcome,
-        List<ExternalCallObservation> externalCalls
+        List<ExternalCallObservation> externalCalls,
+        List<RedisOperationObservation> redisOperations
 ) {
+
+    /**
+     * Creates a snapshot without Redis observations.
+     *
+     * <p>This constructor preserves the v0.3 source API.</p>
+     */
+    public TransactionSnapshot(
+            String transactionId,
+            TransactionEntryPoint entryPoint,
+            Duration duration,
+            TransactionOutcome outcome,
+            List<ExternalCallObservation> externalCalls
+    ) {
+        this(transactionId, entryPoint, duration, outcome, externalCalls, List.of());
+    }
 
     /** Validates and creates an immutable transaction snapshot. */
     public TransactionSnapshot {
@@ -34,5 +51,7 @@ public record TransactionSnapshot(
         }
         Objects.requireNonNull(outcome, "outcome must not be null");
         externalCalls = List.copyOf(Objects.requireNonNull(externalCalls, "externalCalls must not be null"));
+        redisOperations = List.copyOf(Objects.requireNonNull(
+                redisOperations, "redisOperations must not be null"));
     }
 }

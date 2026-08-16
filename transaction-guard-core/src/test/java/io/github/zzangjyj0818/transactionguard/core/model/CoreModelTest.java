@@ -39,6 +39,24 @@ class CoreModelTest {
     }
 
     @Test
+    void redisOperationRejectsInvalidData() {
+        assertThrows(IllegalArgumentException.class, () -> new RedisOperationObservation(
+                RedisClientType.REDIS_TEMPLATE,
+                RedisCommandCategory.READ,
+                -1,
+                ExternalCallOutcome.SUCCESS,
+                null
+        ));
+        assertThrows(IllegalArgumentException.class, () -> new RedisOperationObservation(
+                RedisClientType.REDIS_TEMPLATE,
+                RedisCommandCategory.READ,
+                1,
+                ExternalCallOutcome.FAILURE,
+                " "
+        ));
+    }
+
+    @Test
     void snapshotDefensivelyCopiesExternalCalls() {
         List<ExternalCallObservation> calls = new ArrayList<>();
         calls.add(externalCall(100));
@@ -49,6 +67,28 @@ class CoreModelTest {
         assertEquals(1, snapshot.externalCalls().size());
         assertThrows(UnsupportedOperationException.class,
                 () -> snapshot.externalCalls().add(externalCall(200)));
+    }
+
+    @Test
+    void snapshotDefensivelyCopiesRedisOperations() {
+        List<RedisOperationObservation> operations = new ArrayList<>();
+        operations.add(new RedisOperationObservation(
+                RedisClientType.REDIS_TEMPLATE,
+                RedisCommandCategory.WRITE,
+                100,
+                ExternalCallOutcome.SUCCESS,
+                null
+        ));
+
+        TransactionSnapshot snapshot = new TransactionSnapshot(
+                "tx", entryPoint(), Duration.ofNanos(100), TransactionOutcome.COMMITTED,
+                List.of(), operations
+        );
+        operations.clear();
+
+        assertEquals(1, snapshot.redisOperations().size());
+        assertThrows(UnsupportedOperationException.class,
+                () -> snapshot.redisOperations().clear());
     }
 
     @Test
@@ -96,5 +136,8 @@ class CoreModelTest {
         assertThrows(NullPointerException.class,
                 () -> new TransactionSnapshot("tx", entryPoint(), Duration.ZERO,
                         TransactionOutcome.COMMITTED, null));
+        assertThrows(NullPointerException.class,
+                () -> new TransactionSnapshot("tx", entryPoint(), Duration.ZERO,
+                        TransactionOutcome.COMMITTED, List.of(), null));
     }
 }
