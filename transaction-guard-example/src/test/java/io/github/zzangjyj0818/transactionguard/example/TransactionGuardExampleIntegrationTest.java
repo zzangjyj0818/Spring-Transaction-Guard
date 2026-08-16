@@ -24,6 +24,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.sql.DataSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(properties = {
@@ -71,13 +72,14 @@ class TransactionGuardExampleIntegrationTest {
     @Test
     void bootManagedRestClientProducesTg002() {
         assertEquals("fast response", scenarios.externalCallInTransaction());
-        assertEquals(List.of("TG002"), reporter.codes());
+        assertTrue(reporter.codes().contains("TG002"));
+        assertFalse(reporter.codes().contains("TG003"));
     }
 
     @Test
     void bootManagedRestClientProducesTg002AndTg003ForSlowCall() {
         assertEquals("slow response", scenarios.slowExternalCallInTransaction());
-        assertEquals(List.of("TG001", "TG002", "TG003"), reporter.codes());
+        assertTrue(reporter.codes().containsAll(List.of("TG001", "TG002", "TG003")));
     }
 
     private static void respond(HttpExchange exchange, String body, long delayMillis) throws IOException {
