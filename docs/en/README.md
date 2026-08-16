@@ -10,6 +10,7 @@ Spring Transaction Guard is a Spring Boot Starter that observes the duration of 
 2. [Configuration Reference](configuration.md) — all settings and defaults
 3. [Detection Codes and Safety](detection-and-safety.md) — TG001–TG003, LOG/THROW, and privacy
 4. [WebClient Support Decision](webclient-support.md) — why v0.2 does not auto-instrument WebClient
+5. [Observability and Prometheus](observability.md) — Micrometer metrics, the Actuator endpoint, and Prometheus
 
 ## Supported environment
 

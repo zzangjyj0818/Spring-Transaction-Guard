@@ -6,6 +6,9 @@
 
 ### Added
 
+- Optional Micrometer metrics for transaction duration, violations, and external HTTP calls
+- Read-only Transaction Guard Actuator endpoint with bounded, sanitized summaries
+- Prometheus-enabled example and bilingual observability guide
 - Host/endpoint Ignore 및 Allow glob 규칙
 - TG001/TG002/TG003 코드별 비활성화 설정
 - Optional OpenFeign Client 관측과 원본 예외 보존
@@ -18,7 +21,7 @@
 
 ### Changed
 
-- 개발 버전을 0.2.0-SNAPSHOT으로 전환
+- 개발 버전을 0.3.0-SNAPSHOT으로 전환
 - RestClient와 OpenFeign이 공통 외부 호출 Snapshot 및 정책 규칙 사용
 - LOG 모드에서 Guard 내부 Policy/Reporter 실패를 격리해 비즈니스 흐름 유지
 - THROW 모드가 commit 전에 위반 예외를 전달해 트랜잭션을 중단하도록 의미 명확화

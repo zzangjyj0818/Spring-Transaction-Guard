@@ -11,7 +11,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 
 /** Optional read-only Actuator endpoint for Transaction Guard. */
-@AutoConfiguration(after = {TransactionGuardMetricsAutoConfiguration.class, TransactionGuardAutoConfiguration.class})
+@AutoConfiguration(
+        after = {TransactionGuardMetricsAutoConfiguration.class, TransactionGuardAutoConfiguration.class},
+        afterName = "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration")
 @ConditionalOnClass(Endpoint.class)
 @ConditionalOnBean(MeterRegistry.class)
 @ConditionalOnAvailableEndpoint(endpoint = TransactionGuardEndpoint.class)

@@ -27,6 +27,7 @@ The library observes and reports risks. It does not rewrite transaction boundari
 |---|---:|---:|---:|
 | 0.1.x | 21+ | 4.1.x | 7.0.x |
 | 0.2.x | 21+ | 4.1.x | 7.0.x |
+| 0.3.x | 21+ | 4.1.x | 7.0.x |
 
 ## License / 라이선스
 
