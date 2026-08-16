@@ -17,6 +17,7 @@ public final class TransactionGuardProperties {
     private final Redis redis = new Redis();
     private final Kafka kafka = new Kafka();
     private final Jdbc jdbc = new Jdbc();
+    private final QueryBudget queryBudget = new QueryBudget();
     private final Violation violation = new Violation();
 
     /** Creates properties initialized with the documented defaults. */
@@ -69,6 +70,9 @@ public final class TransactionGuardProperties {
 
     /** Returns JDBC observation settings. */
     public Jdbc getJdbc() { return jdbc; }
+
+    /** Returns experimental Query Budget settings. */
+    public QueryBudget getQueryBudget() { return queryBudget; }
 
     /**
      * Returns violation reporting settings.
@@ -238,6 +242,20 @@ public final class TransactionGuardProperties {
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
     }
 
+    /** Experimental global transaction-level query budget. */
+    public static final class QueryBudget {
+        private boolean enabled;
+        private long maxQueries = 100;
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public long getMaxQueries() { return maxQueries; }
+        public void setMaxQueries(long maxQueries) {
+            if (maxQueries < 0) throw new IllegalArgumentException("maxQueries must not be negative");
+            this.maxQueries = maxQueries;
+        }
+    }
+
     /** Violation reporting settings. */
     public static final class Violation {
         private Mode mode = Mode.LOG;
@@ -292,7 +310,9 @@ public final class TransactionGuardProperties {
         /** Kafka producer call inside a transaction. */
         TG006,
         /** Slow Kafka producer call inside a transaction. */
-        TG007
+        TG007,
+        /** Experimental JDBC query budget exceeded. */
+        TG008
     }
 
     /** Supported violation reporting modes. */

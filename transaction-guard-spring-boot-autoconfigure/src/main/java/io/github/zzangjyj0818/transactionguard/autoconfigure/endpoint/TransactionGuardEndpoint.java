@@ -56,6 +56,8 @@ public final class TransactionGuardEndpoint {
                 properties.getKafka().isEnabled(),
                 properties.getKafka().getSlowThreshold().toNanos(),
                 properties.getJdbc().isEnabled(),
+                properties.getQueryBudget().isEnabled(),
+                properties.getQueryBudget().getMaxQueries(),
                 disabledCodes,
                 new RuleCounts(
                         externalCall.getIgnoreHosts().size(),
@@ -155,6 +157,8 @@ public final class TransactionGuardEndpoint {
             boolean kafkaEnabled,
             long kafkaSlowThresholdNanos,
             boolean jdbcEnabled,
+            boolean queryBudgetEnabled,
+            long queryBudgetMaxQueries,
             Set<String> disabledViolationCodes,
             RuleCounts ruleCounts
     ) {

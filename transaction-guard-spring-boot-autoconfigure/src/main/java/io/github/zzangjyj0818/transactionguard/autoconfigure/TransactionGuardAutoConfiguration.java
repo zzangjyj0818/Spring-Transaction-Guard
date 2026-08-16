@@ -9,6 +9,7 @@ import io.github.zzangjyj0818.transactionguard.core.policy.RedisOperationPolicy;
 import io.github.zzangjyj0818.transactionguard.core.policy.SlowRedisOperationPolicy;
 import io.github.zzangjyj0818.transactionguard.core.policy.KafkaProducerCallPolicy;
 import io.github.zzangjyj0818.transactionguard.core.policy.SlowKafkaProducerCallPolicy;
+import io.github.zzangjyj0818.transactionguard.core.policy.QueryBudgetPolicy;
 import io.github.zzangjyj0818.transactionguard.core.reporter.LoggingTransactionGuardReporter;
 import io.github.zzangjyj0818.transactionguard.core.reporter.ThrowingTransactionGuardReporter;
 import io.github.zzangjyj0818.transactionguard.core.reporter.TransactionGuardReporter;
@@ -207,6 +208,15 @@ public class TransactionGuardAutoConfiguration {
             havingValue = "true", matchIfMissing = true)
     TransactionGuardJdbcAspect transactionGuardJdbcAspect(TransactionGuardJdbcRecorder recorder) {
         return new TransactionGuardJdbcAspect(recorder);
+    }
+
+    /** Creates experimental TG008 only when explicitly enabled. */
+    @Bean("transactionGuardQueryBudgetPolicy")
+    @ConditionalOnMissingBean(name = "transactionGuardQueryBudgetPolicy")
+    @ConditionalOnProperty(prefix = "transaction-guard.query-budget", name = "enabled", havingValue = "true")
+    TransactionGuardPolicy transactionGuardQueryBudgetPolicy(TransactionGuardProperties properties) {
+        return configuredPolicy(properties, TransactionGuardProperties.ViolationCode.TG008,
+                () -> new QueryBudgetPolicy(properties.getQueryBudget().getMaxQueries()));
     }
 
     /** Creates the configured default Reporter unless the application supplies one. */

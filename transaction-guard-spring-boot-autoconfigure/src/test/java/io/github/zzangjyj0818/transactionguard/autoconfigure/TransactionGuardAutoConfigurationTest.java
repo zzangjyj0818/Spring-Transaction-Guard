@@ -96,6 +96,22 @@ class TransactionGuardAutoConfigurationTest {
     }
 
     @Test
+    void queryBudgetIsOptInAndValidatesItsLimit() {
+        contextRunner.withPropertyValues(
+                "transaction-guard.query-budget.enabled=true",
+                "transaction-guard.query-budget.max-queries=25"
+        ).run(context -> {
+            assertTrue(context.getBean(TransactionGuardProperties.class).getQueryBudget().isEnabled());
+            assertEquals(25, context.getBean(TransactionGuardProperties.class)
+                    .getQueryBudget().getMaxQueries());
+            assertTrue(context.containsBean("transactionGuardQueryBudgetPolicy"));
+        });
+
+        contextRunner.withPropertyValues("transaction-guard.query-budget.max-queries=-1")
+                .run(context -> assertNotNull(context.getStartupFailure()));
+    }
+
+    @Test
     void bindsPolicyControlProperties() {
         contextRunner.withPropertyValues(
                 "transaction-guard.external-call.ignore-hosts[0]=metadata.internal",

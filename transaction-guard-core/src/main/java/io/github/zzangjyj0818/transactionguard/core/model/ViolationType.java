@@ -15,7 +15,9 @@ public enum ViolationType {
     /** Kafka producer call occurred while a transaction was active. */
     KAFKA_PRODUCER_CALL_IN_TRANSACTION("TG006"),
     /** Kafka producer call duration exceeded its configured limit. */
-    SLOW_KAFKA_PRODUCER_CALL_IN_TRANSACTION("TG007");
+    SLOW_KAFKA_PRODUCER_CALL_IN_TRANSACTION("TG007"),
+    /** JDBC query count exceeded the configured experimental budget. */
+    QUERY_BUDGET_EXCEEDED("TG008");
 
     private final String code;
 
