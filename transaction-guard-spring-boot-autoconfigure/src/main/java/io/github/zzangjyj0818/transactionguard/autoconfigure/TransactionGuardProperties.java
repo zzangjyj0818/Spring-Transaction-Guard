@@ -16,6 +16,7 @@ public final class TransactionGuardProperties {
     private final ExternalCall externalCall = new ExternalCall();
     private final Redis redis = new Redis();
     private final Kafka kafka = new Kafka();
+    private final Jdbc jdbc = new Jdbc();
     private final Violation violation = new Violation();
 
     /** Creates properties initialized with the documented defaults. */
@@ -65,6 +66,9 @@ public final class TransactionGuardProperties {
 
     /** Returns Kafka producer observation settings. */
     public Kafka getKafka() { return kafka; }
+
+    /** Returns JDBC observation settings. */
+    public Jdbc getJdbc() { return jdbc; }
 
     /**
      * Returns violation reporting settings.
@@ -225,6 +229,13 @@ public final class TransactionGuardProperties {
         public void setSlowThreshold(Duration value) {
             slowThreshold = requireNonNegative(value, "slowThreshold");
         }
+    }
+
+    /** JDBC query observation settings. */
+    public static final class Jdbc {
+        private boolean enabled = true;
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
     }
 
     /** Violation reporting settings. */

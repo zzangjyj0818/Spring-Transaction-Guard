@@ -55,6 +55,7 @@ public final class TransactionGuardEndpoint {
                 properties.getRedis().getSlowThreshold().toNanos(),
                 properties.getKafka().isEnabled(),
                 properties.getKafka().getSlowThreshold().toNanos(),
+                properties.getJdbc().isEnabled(),
                 disabledCodes,
                 new RuleCounts(
                         externalCall.getIgnoreHosts().size(),
@@ -113,8 +114,14 @@ public final class TransactionGuardEndpoint {
                     counter == null ? 0L : Math.round(counter.count()),
                     timer(TransactionGuardMetrics.KAFKA_PRODUCER_DURATION, "outcome", result)));
         }
+        Counter jdbcTotal = registry.find(TransactionGuardMetrics.JDBC_QUERY_TOTAL).counter();
+        Counter jdbcFailures = registry.find(TransactionGuardMetrics.JDBC_QUERY_FAILURE_TOTAL).counter();
+        JdbcValue jdbc = new JdbcValue(
+                jdbcTotal == null ? 0L : Math.round(jdbcTotal.count()),
+                jdbcFailures == null ? 0L : Math.round(jdbcFailures.count()),
+                timer(TransactionGuardMetrics.JDBC_QUERY_DURATION));
         return new Metrics(Map.copyOf(transactions), Map.copyOf(violations),
-                Map.copyOf(externalHttp), Map.copyOf(redis), Map.copyOf(kafka));
+                Map.copyOf(externalHttp), Map.copyOf(redis), Map.copyOf(kafka), jdbc);
     }
 
     private TimerValue timer(String name, String... tags) {
@@ -147,6 +154,7 @@ public final class TransactionGuardEndpoint {
             long redisSlowThresholdNanos,
             boolean kafkaEnabled,
             long kafkaSlowThresholdNanos,
+            boolean jdbcEnabled,
             Set<String> disabledViolationCodes,
             RuleCounts ruleCounts
     ) {
@@ -162,7 +170,8 @@ public final class TransactionGuardEndpoint {
             Map<String, Long> violations,
             Map<String, ExternalHttpValue> externalHttp,
             Map<String, ExternalHttpValue> redis,
-            Map<String, ExternalHttpValue> kafkaProducer
+            Map<String, ExternalHttpValue> kafkaProducer,
+            JdbcValue jdbc
     ) {
     }
 
@@ -172,5 +181,9 @@ public final class TransactionGuardEndpoint {
 
     /** External HTTP count and duration summary. */
     public record ExternalHttpValue(long count, TimerValue duration) {
+    }
+
+    /** Aggregate JDBC execution summary. */
+    public record JdbcValue(long queryCount, long failedQueryCount, TimerValue duration) {
     }
 }
