@@ -28,11 +28,13 @@ public final class TransactionGuardJdbcAspect {
     }
 
     private Connection connectionProxy(Connection target) {
+        if (isGuardProxy(target, ConnectionHandler.class)) return target;
         return (Connection) Proxy.newProxyInstance(target.getClass().getClassLoader(),
                 new Class<?>[]{Connection.class}, new ConnectionHandler(target));
     }
 
     private Statement statementProxy(Statement target) {
+        if (isGuardProxy(target, StatementHandler.class)) return target;
         Class<?> primary = target instanceof java.sql.CallableStatement
                 ? java.sql.CallableStatement.class
                 : target instanceof java.sql.PreparedStatement
@@ -41,12 +43,27 @@ public final class TransactionGuardJdbcAspect {
                 new Class<?>[]{primary}, new StatementHandler(target));
     }
 
+    private static boolean isGuardProxy(Object candidate, Class<?> handlerType) {
+        return Proxy.isProxyClass(candidate.getClass())
+                && handlerType.isInstance(Proxy.getInvocationHandler(candidate));
+    }
+
     private final class ConnectionHandler implements InvocationHandler {
         private final Connection target;
         private ConnectionHandler(Connection target) { this.target = target; }
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            if (method.getName().equals("unwrap") && args != null
+                    && args.length == 1 && args[0] instanceof Class<?> type
+                    && type.isInstance(proxy)) {
+                return proxy;
+            }
+            if (method.getName().equals("isWrapperFor") && args != null
+                    && args.length == 1 && args[0] instanceof Class<?> type
+                    && type.isInstance(proxy)) {
+                return true;
+            }
             try {
                 Object result = method.invoke(target, args);
                 return result instanceof Statement statement ? statementProxy(statement) : result;
@@ -62,6 +79,16 @@ public final class TransactionGuardJdbcAspect {
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            if (method.getName().equals("unwrap") && args != null
+                    && args.length == 1 && args[0] instanceof Class<?> type
+                    && type.isInstance(proxy)) {
+                return proxy;
+            }
+            if (method.getName().equals("isWrapperFor") && args != null
+                    && args.length == 1 && args[0] instanceof Class<?> type
+                    && type.isInstance(proxy)) {
+                return true;
+            }
             if (!method.getName().startsWith("execute") || !recorder.isTransactionObserved()) {
                 return invokeTarget(method, args);
             }

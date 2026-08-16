@@ -23,13 +23,20 @@ dependencies {
 | Micrometer 이름 | 타입 | 기록 시점 | 저카디널리티 태그 |
 |---|---|---|---|
 | `transaction.guard.transaction.duration` | Timer | 관측된 트랜잭션 완료 시 1회 | `outcome`: `committed`, `rolled_back`, `unknown` |
-| `transaction.guard.violation.total` | Counter | 평가된 위반마다 1회 | `code`: `TG001`, `TG002`, `TG003` |
+| `transaction.guard.violation.total` | Counter | 평가된 위반마다 1회 | `code`: `TG001`~`TG008` |
 | `transaction.guard.external.http.duration` | Timer | 관측된 외부 HTTP 호출마다 1회 | `client_type`, `outcome` |
 | `transaction.guard.external.http.total` | Counter | 관측된 외부 HTTP 호출마다 1회 | `client_type`, `outcome` |
+| `transaction.guard.redis.duration` | Timer | 관측된 Redis 작업마다 1회 | `command_category`, `outcome` |
+| `transaction.guard.redis.total` | Counter | 관측된 Redis 작업마다 1회 | `command_category`, `outcome` |
+| `transaction.guard.kafka.producer.duration` | Timer | transaction 안에서 완료된 Kafka send마다 1회 | `outcome` |
+| `transaction.guard.kafka.producer.total` | Counter | transaction 안에서 완료된 Kafka send마다 1회 | `outcome` |
+| `transaction.guard.jdbc.query.total` | Counter | 완료된 transaction의 JDBC query 수만큼 | 없음 |
+| `transaction.guard.jdbc.query.failure.total` | Counter | 실패한 JDBC query 수만큼 | 없음 |
+| `transaction.guard.jdbc.query.duration` | Timer | JDBC query가 있는 transaction마다 aggregate 1회 | 없음 |
 
 `client_type`은 `rest_client` 또는 `open_feign`, 외부 호출 `outcome`은 `success` 또는 `failure`입니다. Timer의 기본 시간 단위와 Prometheus에 노출되는 실제 suffix는 Micrometer registry 규칙을 따릅니다.
 
-transaction ID, 진입 메서드, host, path, 예외 타입은 메트릭 태그로 사용하지 않습니다. 요청 query, header, body도 수집하지 않습니다. 따라서 사용자 입력이나 목적지 수에 비례해 시계열 수가 증가하지 않습니다.
+transaction ID, 진입 메서드, host, path, Redis key, Kafka topic, SQL, 예외 타입은 메트릭 태그로 사용하지 않습니다. 요청 query, header, body, Kafka payload와 bind parameter도 수집하지 않습니다. 따라서 사용자 입력이나 목적지 수에 비례해 시계열 수가 증가하지 않습니다.
 
 Ignore 규칙으로 제외된 호출은 메트릭에도 기록되지 않습니다. Allow 규칙의 호출은 관측 메트릭에는 포함되지만 TG002/TG003 위반 Counter는 증가시키지 않습니다. 비활성화한 위반 코드도 Counter를 증가시키지 않습니다.
 
@@ -51,9 +58,12 @@ management:
 이후 `GET /actuator/transactionguard`에서 다음 정보를 확인할 수 있습니다.
 
 - 트랜잭션 결과별 Timer 집계
-- TG001~TG003 위반 횟수
+- TG001~TG008 위반 횟수
 - RestClient/OpenFeign 및 성공/실패별 HTTP 집계
-- 적용 중인 시간 임계값과 위반 모드
+- category/outcome별 Redis 집계
+- 성공/실패별 Kafka producer 집계
+- JDBC query/실패 count와 aggregate duration
+- 적용 중인 시간 임계값, Query Budget과 위반 모드
 - 비활성 위반 코드와 Ignore/Allow 규칙 개수
 
 endpoint는 설정된 host/path 패턴의 원문을 반환하지 않으며 별도의 최근 이벤트 목록을 저장하지 않습니다. 모든 차원은 고정된 enum과 위반 코드 조합으로 제한됩니다.
@@ -92,6 +102,9 @@ PromQL 예시:
 ```promql
 rate(transaction_guard_violation_total[5m])
 rate(transaction_guard_external_http_total[5m])
+rate(transaction_guard_redis_total[5m])
+rate(transaction_guard_kafka_producer_total[5m])
+rate(transaction_guard_jdbc_query_total[5m])
 histogram_quantile(0.95, sum by (le) (rate(transaction_guard_transaction_duration_seconds_bucket[5m])))
 ```
 

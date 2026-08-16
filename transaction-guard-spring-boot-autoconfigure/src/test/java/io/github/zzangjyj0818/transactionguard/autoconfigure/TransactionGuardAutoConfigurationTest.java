@@ -13,6 +13,9 @@ import io.github.zzangjyj0818.transactionguard.core.reporter.TransactionGuardRep
 import io.github.zzangjyj0818.transactionguard.spring.aop.TransactionGuardAspect;
 import io.github.zzangjyj0818.transactionguard.spring.http.TransactionGuardHttpInterceptor;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservation;
+import io.github.zzangjyj0818.transactionguard.spring.redis.TransactionGuardRedisAspect;
+import io.github.zzangjyj0818.transactionguard.spring.kafka.TransactionGuardKafkaAspect;
+import io.github.zzangjyj0818.transactionguard.spring.jdbc.TransactionGuardJdbcAspect;
 import io.github.zzangjyj0818.transactionguard.autoconfigure.metrics.TransactionGuardMetrics;
 import io.github.zzangjyj0818.transactionguard.autoconfigure.endpoint.TransactionGuardEndpoint;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -20,12 +23,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.restclient.autoconfigure.RestClientAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Set;
+import javax.sql.DataSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -190,6 +196,48 @@ class TransactionGuardAutoConfigurationTest {
     }
 
     @Test
+    void featureFlagsDisableOnlyTheirInstrumentationAndPolicies() {
+        contextRunner.withPropertyValues(
+                "transaction-guard.redis.enabled=false",
+                "transaction-guard.kafka.enabled=false"
+        ).run(context -> {
+            assertTrue(context.getBeansOfType(TransactionGuardRedisAspect.class).isEmpty());
+            assertTrue(context.getBeansOfType(TransactionGuardKafkaAspect.class).isEmpty());
+            assertFalse(context.containsBean("transactionGuardRedisOperationPolicy"));
+            assertFalse(context.containsBean("transactionGuardSlowRedisOperationPolicy"));
+            assertFalse(context.containsBean("transactionGuardKafkaProducerCallPolicy"));
+            assertFalse(context.containsBean("transactionGuardSlowKafkaProducerCallPolicy"));
+            assertEquals(3, context.getBeansOfType(TransactionGuardPolicy.class).size());
+        });
+    }
+
+    @Test
+    void optionalClientClasspathAbsenceDoesNotLoadInstrumentation() {
+        contextRunner.withClassLoader(new FilteredClassLoader(
+                "org.springframework.data.redis", "org.springframework.kafka"))
+                .run(context -> {
+                    assertTrue(context.getBeansOfType(TransactionGuardRedisAspect.class).isEmpty());
+                    assertTrue(context.getBeansOfType(TransactionGuardKafkaAspect.class).isEmpty());
+                    assertEquals(3, context.getBeansOfType(TransactionGuardPolicy.class).size());
+                });
+    }
+
+    @Test
+    void jdbcInstrumentationRequiresDataSourceAndHonorsFeatureFlag() {
+        contextRunner.run(context ->
+                assertTrue(context.getBeansOfType(TransactionGuardJdbcAspect.class).isEmpty()));
+
+        contextRunner.withUserConfiguration(DataSourceConfiguration.class)
+                .run(context -> assertEquals(1,
+                        context.getBeansOfType(TransactionGuardJdbcAspect.class).size()));
+
+        contextRunner.withUserConfiguration(DataSourceConfiguration.class)
+                .withPropertyValues("transaction-guard.jdbc.enabled=false")
+                .run(context -> assertTrue(
+                        context.getBeansOfType(TransactionGuardJdbcAspect.class).isEmpty()));
+    }
+
+    @Test
     void contributesCustomizerToBootManagedRestClientBuilders() {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
@@ -271,6 +319,20 @@ class TransactionGuardAutoConfigurationTest {
         @Bean
         TransactionGuardReporter customReporter() {
             return new CapturingReporter();
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class DataSourceConfiguration {
+        @Bean
+        DataSource dataSource() {
+            return (DataSource) Proxy.newProxyInstance(
+                    DataSource.class.getClassLoader(), new Class<?>[]{DataSource.class},
+                    (proxy, method, args) -> {
+                        if (method.getReturnType() == boolean.class) return false;
+                        if (method.getReturnType() == int.class) return 0;
+                        return null;
+                    });
         }
     }
 
