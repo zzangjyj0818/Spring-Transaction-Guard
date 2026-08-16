@@ -80,6 +80,12 @@ class TransactionGuardExampleIntegrationTest {
         assertTrue(reporter.codes().containsAll(List.of("TG001", "TG002", "TG003")));
     }
 
+    @Test
+    void openFeignProducesTg002() {
+        assertEquals("fast response", scenarios.openFeignCallInTransaction());
+        assertTrue(reporter.codes().contains("TG002"));
+    }
+
     private static void respond(HttpExchange exchange, String body, long delayMillis) throws IOException {
         if (delayMillis > 0) {
             try {

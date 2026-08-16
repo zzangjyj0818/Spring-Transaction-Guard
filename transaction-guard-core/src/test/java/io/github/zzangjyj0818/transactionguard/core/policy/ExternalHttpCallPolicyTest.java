@@ -31,4 +31,13 @@ class ExternalHttpCallPolicyTest {
         assertEquals("payments.example.com", violations.getFirst().attributes().get("host"));
         assertEquals("/v1/payments", violations.getFirst().attributes().get("path"));
     }
+
+    @Test
+    void skipsCallsRejectedByCandidatePredicate() {
+        ExternalHttpCallPolicy filtered = new ExternalHttpCallPolicy(
+                call -> !call.host().equals("payments.example.com"));
+
+        assertTrue(filtered.evaluate(snapshot(
+                Duration.ofSeconds(1), List.of(externalCall(10)))).isEmpty());
+    }
 }

@@ -1,5 +1,8 @@
 package io.github.zzangjyj0818.transactionguard.example;
 
+import feign.Feign;
+import feign.codec.StringDecoder;
+import io.github.zzangjyj0818.transactionguard.spring.http.TransactionGuardFeignCapability;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +16,7 @@ public class TransactionRiskScenarios {
 
     private final RestClient restClient;
     private final String remoteBaseUrl;
+    private final ExampleFeignClient feignClient;
 
     /**
      * Creates scenarios using Boot's customized RestClient builder.
@@ -22,10 +26,15 @@ public class TransactionRiskScenarios {
      */
     public TransactionRiskScenarios(
             RestClient.Builder restClientBuilder,
+            TransactionGuardFeignCapability feignCapability,
             @Value("${example.remote-base-url:http://localhost:${server.port:8080}}") String remoteBaseUrl
     ) {
         this.restClient = restClientBuilder.build();
         this.remoteBaseUrl = remoteBaseUrl;
+        this.feignClient = Feign.builder()
+                .decoder(new StringDecoder())
+                .addCapability(feignCapability)
+                .target(ExampleFeignClient.class, remoteBaseUrl);
     }
 
     /**
@@ -57,6 +66,12 @@ public class TransactionRiskScenarios {
     @Transactional
     public String slowExternalCallInTransaction() {
         return restClient.get().uri(remoteBaseUrl + "/remote/slow").retrieve().body(String.class);
+    }
+
+    /** Performs an OpenFeign call inside a transaction to produce TG002. */
+    @Transactional
+    public String openFeignCallInTransaction() {
+        return feignClient.fast();
     }
 
     private static void pause(Duration duration) {

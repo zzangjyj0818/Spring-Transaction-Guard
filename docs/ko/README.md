@@ -9,12 +9,13 @@ Spring Transaction Guard는 실제 활성 DB 트랜잭션의 실행 시간과 �
 1. [시작하기](getting-started.md) — 요구 사항, 설치, 실행
 2. [설정 레퍼런스](configuration.md) — 전체 설정과 기본값
 3. [탐지 코드와 안전성](detection-and-safety.md) — TG001~TG003, LOG/THROW, 개인정보 처리
+4. [WebClient 지원 결정](webclient-support.md) — v0.2에서 자동 관측하지 않는 이유
 
 ## 지원 범위
 
 - Java 21 이상
 - Spring Boot 4.1.x / Spring Framework 7.0.x
 - `PlatformTransactionManager` 기반 명령형 트랜잭션
-- Spring `RestClient`의 동기식 호출
+- Spring `RestClient` 또는 OpenFeign의 동기식 호출
 
-Reactive transaction, `WebClient`, OpenFeign은 0.1.x 지원 범위에 포함되지 않습니다.
+Reactive transaction과 `WebClient`는 지원하지 않습니다. 자세한 내용은 연결된 결정 문서를 참고하세요.

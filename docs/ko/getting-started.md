@@ -37,7 +37,22 @@ RestClient paymentsClient(RestClient.Builder builder) {
 
 직접 만든 `RestClient.create()`와 `RestClient.builder()`는 Boot customizer를 거치지 않아 자동 관측되지 않습니다. 필요하면 `TransactionGuardRestClientConfigurer`로 builder를 명시적으로 구성하세요.
 
-## 3. 예제 실행
+## 3. OpenFeign 사용
+
+OpenFeign이 classpath에 있으면 Transaction Guard가 `TransactionGuardFeignCapability` Bean을 제공합니다. Spring Cloud OpenFeign은 Feign client 설정에 등록된 `Capability` Bean을 사용합니다. 직접 client를 만들 때는 다음처럼 명시적으로 추가하세요.
+
+```java
+@Bean
+PaymentsClient paymentsClient(TransactionGuardFeignCapability capability) {
+    return Feign.builder()
+            .addCapability(capability)
+            .target(PaymentsClient.class, "https://payments.example.com");
+}
+```
+
+Capability는 내부 blocking Feign client를 감싸며 원본 Feign 및 transport 예외를 보존합니다. RestClient와 동일한 정제, Ignore, Allow, threshold 규칙이 적용됩니다.
+
+## 4. 예제 실행
 
 ```bash
 ./gradlew :transaction-guard-example:bootRun
@@ -49,10 +64,12 @@ RestClient paymentsClient(RestClient.Builder builder) {
 curl http://localhost:8080/guard/tg001
 curl http://localhost:8080/guard/tg002
 curl http://localhost:8080/guard/tg003
+curl http://localhost:8080/guard/feign
 ```
 
 - `/guard/tg001`: 장시간 트랜잭션으로 TG001 발생
 - `/guard/tg002`: 트랜잭션 내부의 빠른 HTTP 호출로 TG002 발생
 - `/guard/tg003`: 트랜잭션 내부의 느린 HTTP 호출로 TG001, TG002, TG003 발생
+- `/guard/feign`: OpenFeign 호출로 TG002 발생
 
 예제는 탐지를 보여주기 위해 의도적으로 위험한 패턴을 사용합니다. 실제 서비스에서는 트랜잭션 범위를 줄이고 원격 I/O를 트랜잭션 밖으로 옮기세요.
