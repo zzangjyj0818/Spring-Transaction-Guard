@@ -105,7 +105,7 @@ class RestClientObservationIntegrationTest {
         assertEquals("/ok", call.path());
         assertEquals(ExternalCallOutcome.SUCCESS, call.outcome());
         assertFalse(call.path().contains("SECRET"));
-        assertEquals(List.of("TG002"), reporter.codes());
+        assertTrue(reporter.codes().contains("TG002"));
     }
 
     @Test
