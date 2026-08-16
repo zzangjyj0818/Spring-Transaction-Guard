@@ -7,6 +7,8 @@ import io.github.zzangjyj0818.transactionguard.core.policy.SlowExternalHttpCallP
 import io.github.zzangjyj0818.transactionguard.core.policy.TransactionGuardPolicy;
 import io.github.zzangjyj0818.transactionguard.core.policy.RedisOperationPolicy;
 import io.github.zzangjyj0818.transactionguard.core.policy.SlowRedisOperationPolicy;
+import io.github.zzangjyj0818.transactionguard.core.policy.KafkaProducerCallPolicy;
+import io.github.zzangjyj0818.transactionguard.core.policy.SlowKafkaProducerCallPolicy;
 import io.github.zzangjyj0818.transactionguard.core.reporter.LoggingTransactionGuardReporter;
 import io.github.zzangjyj0818.transactionguard.core.reporter.ThrowingTransactionGuardReporter;
 import io.github.zzangjyj0818.transactionguard.core.reporter.TransactionGuardReporter;
@@ -20,6 +22,8 @@ import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObs
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservationListener;
 import io.github.zzangjyj0818.transactionguard.spring.redis.TransactionGuardRedisAspect;
 import io.github.zzangjyj0818.transactionguard.spring.redis.TransactionGuardRedisRecorder;
+import io.github.zzangjyj0818.transactionguard.spring.kafka.TransactionGuardKafkaAspect;
+import io.github.zzangjyj0818.transactionguard.spring.kafka.TransactionGuardKafkaRecorder;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -139,6 +143,47 @@ public class TransactionGuardAutoConfiguration {
             havingValue = "true", matchIfMissing = true)
     TransactionGuardRedisAspect transactionGuardRedisAspect(TransactionGuardRedisRecorder recorder) {
         return new TransactionGuardRedisAspect(recorder);
+    }
+
+    /** Creates TG006 for Kafka producer calls. */
+    @Bean("transactionGuardKafkaProducerCallPolicy")
+    @ConditionalOnMissingBean(name = "transactionGuardKafkaProducerCallPolicy")
+    @ConditionalOnClass(name = "org.springframework.kafka.core.KafkaTemplate")
+    @ConditionalOnProperty(prefix = "transaction-guard.kafka", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardPolicy transactionGuardKafkaProducerCallPolicy(TransactionGuardProperties properties) {
+        return configuredPolicy(properties, TransactionGuardProperties.ViolationCode.TG006,
+                KafkaProducerCallPolicy::new);
+    }
+
+    /** Creates TG007 for slow Kafka producer calls. */
+    @Bean("transactionGuardSlowKafkaProducerCallPolicy")
+    @ConditionalOnMissingBean(name = "transactionGuardSlowKafkaProducerCallPolicy")
+    @ConditionalOnClass(name = "org.springframework.kafka.core.KafkaTemplate")
+    @ConditionalOnProperty(prefix = "transaction-guard.kafka", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardPolicy transactionGuardSlowKafkaProducerCallPolicy(TransactionGuardProperties properties) {
+        return configuredPolicy(properties, TransactionGuardProperties.ViolationCode.TG007,
+                () -> new SlowKafkaProducerCallPolicy(properties.getKafka().getSlowThreshold()));
+    }
+
+    /** Creates privacy-safe Kafka producer instrumentation. */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(name = "org.springframework.kafka.core.KafkaTemplate")
+    @ConditionalOnProperty(prefix = "transaction-guard.kafka", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardKafkaRecorder transactionGuardKafkaRecorder(TransactionGuardContextRegistry registry) {
+        return new TransactionGuardKafkaRecorder(registry);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(name = "org.springframework.kafka.core.KafkaTemplate")
+    @ConditionalOnProperty(prefix = "transaction-guard.kafka", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardKafkaAspect transactionGuardKafkaAspect(TransactionGuardKafkaRecorder recorder) {
+        return new TransactionGuardKafkaAspect(recorder);
     }
 
     /** Creates the configured default Reporter unless the application supplies one. */

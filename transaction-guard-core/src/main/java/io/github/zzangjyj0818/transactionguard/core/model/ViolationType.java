@@ -11,7 +11,11 @@ public enum ViolationType {
     /** Redis operation occurred while a transaction was active. */
     REDIS_OPERATION_IN_TRANSACTION("TG004"),
     /** Redis operation duration exceeded its configured limit. */
-    SLOW_REDIS_OPERATION_IN_TRANSACTION("TG005");
+    SLOW_REDIS_OPERATION_IN_TRANSACTION("TG005"),
+    /** Kafka producer call occurred while a transaction was active. */
+    KAFKA_PRODUCER_CALL_IN_TRANSACTION("TG006"),
+    /** Kafka producer call duration exceeded its configured limit. */
+    SLOW_KAFKA_PRODUCER_CALL_IN_TRANSACTION("TG007");
 
     private final String code;
 

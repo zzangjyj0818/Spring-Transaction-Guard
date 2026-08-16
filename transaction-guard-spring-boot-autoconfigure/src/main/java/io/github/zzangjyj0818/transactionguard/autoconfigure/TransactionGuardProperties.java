@@ -15,6 +15,7 @@ public final class TransactionGuardProperties {
     private final Transaction transaction = new Transaction();
     private final ExternalCall externalCall = new ExternalCall();
     private final Redis redis = new Redis();
+    private final Kafka kafka = new Kafka();
     private final Violation violation = new Violation();
 
     /** Creates properties initialized with the documented defaults. */
@@ -61,6 +62,9 @@ public final class TransactionGuardProperties {
     public Redis getRedis() {
         return redis;
     }
+
+    /** Returns Kafka producer observation settings. */
+    public Kafka getKafka() { return kafka; }
 
     /**
      * Returns violation reporting settings.
@@ -210,6 +214,19 @@ public final class TransactionGuardProperties {
         }
     }
 
+    /** Kafka producer observation settings. */
+    public static final class Kafka {
+        private boolean enabled = true;
+        private Duration slowThreshold = Duration.ofSeconds(1);
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public Duration getSlowThreshold() { return slowThreshold; }
+        public void setSlowThreshold(Duration value) {
+            slowThreshold = requireNonNegative(value, "slowThreshold");
+        }
+    }
+
     /** Violation reporting settings. */
     public static final class Violation {
         private Mode mode = Mode.LOG;
@@ -260,7 +277,11 @@ public final class TransactionGuardProperties {
         /** Redis operation inside a transaction. */
         TG004,
         /** Slow Redis operation inside a transaction. */
-        TG005
+        TG005,
+        /** Kafka producer call inside a transaction. */
+        TG006,
+        /** Slow Kafka producer call inside a transaction. */
+        TG007
     }
 
     /** Supported violation reporting modes. */

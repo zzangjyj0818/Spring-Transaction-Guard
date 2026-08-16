@@ -53,6 +53,8 @@ public final class TransactionGuardEndpoint {
                 externalCall.getSlowThreshold().toNanos(),
                 properties.getRedis().isEnabled(),
                 properties.getRedis().getSlowThreshold().toNanos(),
+                properties.getKafka().isEnabled(),
+                properties.getKafka().getSlowThreshold().toNanos(),
                 disabledCodes,
                 new RuleCounts(
                         externalCall.getIgnoreHosts().size(),
@@ -102,8 +104,17 @@ public final class TransactionGuardEndpoint {
                                 "command_category", command, "outcome", result)));
             }
         }
+        Map<String, ExternalHttpValue> kafka = new LinkedHashMap<>();
+        for (ExternalCallOutcome outcome : ExternalCallOutcome.values()) {
+            String result = tag(outcome);
+            Counter counter = registry.find(TransactionGuardMetrics.KAFKA_PRODUCER_TOTAL)
+                    .tag("outcome", result).counter();
+            kafka.put(result, new ExternalHttpValue(
+                    counter == null ? 0L : Math.round(counter.count()),
+                    timer(TransactionGuardMetrics.KAFKA_PRODUCER_DURATION, "outcome", result)));
+        }
         return new Metrics(Map.copyOf(transactions), Map.copyOf(violations),
-                Map.copyOf(externalHttp), Map.copyOf(redis));
+                Map.copyOf(externalHttp), Map.copyOf(redis), Map.copyOf(kafka));
     }
 
     private TimerValue timer(String name, String... tags) {
@@ -134,6 +145,8 @@ public final class TransactionGuardEndpoint {
             long externalCallSlowThresholdNanos,
             boolean redisEnabled,
             long redisSlowThresholdNanos,
+            boolean kafkaEnabled,
+            long kafkaSlowThresholdNanos,
             Set<String> disabledViolationCodes,
             RuleCounts ruleCounts
     ) {
@@ -148,7 +161,8 @@ public final class TransactionGuardEndpoint {
             Map<String, TimerValue> transactions,
             Map<String, Long> violations,
             Map<String, ExternalHttpValue> externalHttp,
-            Map<String, ExternalHttpValue> redis
+            Map<String, ExternalHttpValue> redis,
+            Map<String, ExternalHttpValue> kafkaProducer
     ) {
     }
 

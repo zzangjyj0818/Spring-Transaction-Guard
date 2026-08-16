@@ -2,6 +2,7 @@ package io.github.zzangjyj0818.transactionguard.autoconfigure.metrics;
 
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.RedisOperationObservation;
+import io.github.zzangjyj0818.transactionguard.core.model.KafkaProducerObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionGuardViolation;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionSnapshot;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservationListener;
@@ -22,6 +23,8 @@ public final class TransactionGuardMetrics implements TransactionObservationList
     public static final String EXTERNAL_HTTP_TOTAL = "transaction.guard.external.http.total";
     public static final String REDIS_DURATION = "transaction.guard.redis.duration";
     public static final String REDIS_TOTAL = "transaction.guard.redis.total";
+    public static final String KAFKA_PRODUCER_DURATION = "transaction.guard.kafka.producer.duration";
+    public static final String KAFKA_PRODUCER_TOTAL = "transaction.guard.kafka.producer.total";
 
     private final MeterRegistry registry;
 
@@ -56,6 +59,12 @@ public final class TransactionGuardMetrics implements TransactionObservationList
             registry.timer(REDIS_DURATION, tags)
                     .record(operation.durationNanos(), TimeUnit.NANOSECONDS);
             registry.counter(REDIS_TOTAL, tags).increment();
+        }
+        for (KafkaProducerObservation call : snapshot.kafkaProducerCalls()) {
+            Tags tags = Tags.of("outcome", tag(call.outcome()));
+            registry.timer(KAFKA_PRODUCER_DURATION, tags)
+                    .record(call.durationNanos(), TimeUnit.NANOSECONDS);
+            registry.counter(KAFKA_PRODUCER_TOTAL, tags).increment();
         }
     }
 

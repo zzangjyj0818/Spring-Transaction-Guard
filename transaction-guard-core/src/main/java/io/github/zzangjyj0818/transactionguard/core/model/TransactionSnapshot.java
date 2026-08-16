@@ -13,6 +13,7 @@ import java.util.Objects;
  * @param outcome final transaction outcome
  * @param externalCalls immutable external calls observed inside the transaction
  * @param redisOperations immutable Redis operations observed inside the transaction
+ * @param kafkaProducerCalls immutable Kafka producer calls observed inside the transaction
  */
 public record TransactionSnapshot(
         String transactionId,
@@ -20,7 +21,8 @@ public record TransactionSnapshot(
         Duration duration,
         TransactionOutcome outcome,
         List<ExternalCallObservation> externalCalls,
-        List<RedisOperationObservation> redisOperations
+        List<RedisOperationObservation> redisOperations,
+        List<KafkaProducerObservation> kafkaProducerCalls
 ) {
 
     /**
@@ -35,7 +37,19 @@ public record TransactionSnapshot(
             TransactionOutcome outcome,
             List<ExternalCallObservation> externalCalls
     ) {
-        this(transactionId, entryPoint, duration, outcome, externalCalls, List.of());
+        this(transactionId, entryPoint, duration, outcome, externalCalls, List.of(), List.of());
+    }
+
+    /** Creates a snapshot without Kafka producer observations. */
+    public TransactionSnapshot(
+            String transactionId,
+            TransactionEntryPoint entryPoint,
+            Duration duration,
+            TransactionOutcome outcome,
+            List<ExternalCallObservation> externalCalls,
+            List<RedisOperationObservation> redisOperations
+    ) {
+        this(transactionId, entryPoint, duration, outcome, externalCalls, redisOperations, List.of());
     }
 
     /** Validates and creates an immutable transaction snapshot. */
@@ -53,5 +67,7 @@ public record TransactionSnapshot(
         externalCalls = List.copyOf(Objects.requireNonNull(externalCalls, "externalCalls must not be null"));
         redisOperations = List.copyOf(Objects.requireNonNull(
                 redisOperations, "redisOperations must not be null"));
+        kafkaProducerCalls = List.copyOf(Objects.requireNonNull(
+                kafkaProducerCalls, "kafkaProducerCalls must not be null"));
     }
 }
