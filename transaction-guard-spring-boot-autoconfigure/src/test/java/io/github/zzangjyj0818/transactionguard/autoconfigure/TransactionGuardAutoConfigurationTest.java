@@ -1,0 +1,126 @@
+package io.github.zzangjyj0818.transactionguard.autoconfigure;
+
+import io.github.zzangjyj0818.transactionguard.core.policy.TransactionGuardPolicy;
+import io.github.zzangjyj0818.transactionguard.core.reporter.LoggingTransactionGuardReporter;
+import io.github.zzangjyj0818.transactionguard.core.reporter.ThrowingTransactionGuardReporter;
+import io.github.zzangjyj0818.transactionguard.core.reporter.TransactionGuardReporter;
+import io.github.zzangjyj0818.transactionguard.spring.aop.TransactionGuardAspect;
+import io.github.zzangjyj0818.transactionguard.spring.http.TransactionGuardHttpInterceptor;
+import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservation;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.restclient.autoconfigure.RestClientAutoConfiguration;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.time.Duration;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TransactionGuardAutoConfigurationTest {
+
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(TransactionGuardAutoConfiguration.class));
+
+    @Test
+    void createsDefaultGuardBeansAndProperties() {
+        contextRunner.run(context -> {
+            assertTrue(context.isRunning());
+            assertEquals(1, context.getBeansOfType(TransactionObservation.class).size());
+            assertEquals(1, context.getBeansOfType(TransactionGuardAspect.class).size());
+            assertEquals(3, context.getBeansOfType(TransactionGuardPolicy.class).size());
+            assertInstanceOf(LoggingTransactionGuardReporter.class,
+                    context.getBean(TransactionGuardReporter.class));
+
+            TransactionGuardProperties properties = context.getBean(TransactionGuardProperties.class);
+            assertTrue(properties.isEnabled());
+            assertEquals(Duration.ofSeconds(2), properties.getTransaction().getMaxDuration());
+            assertTrue(properties.getExternalCall().isEnabled());
+            assertEquals(Duration.ofSeconds(1), properties.getExternalCall().getSlowThreshold());
+            assertEquals(TransactionGuardProperties.Mode.LOG, properties.getViolation().getMode());
+        });
+    }
+
+    @Test
+    void disablesEveryGuardBeanWhenGuardIsDisabled() {
+        contextRunner.withPropertyValues("transaction-guard.enabled=false").run(context -> {
+            assertTrue(context.getBeansOfType(TransactionObservation.class).isEmpty());
+            assertTrue(context.getBeansOfType(TransactionGuardAspect.class).isEmpty());
+            assertTrue(context.getBeansOfType(TransactionGuardReporter.class).isEmpty());
+            assertTrue(context.getBeansOfType(TransactionGuardProperties.class).isEmpty());
+        });
+    }
+
+    @Test
+    void bindsThresholdsAndCreatesThrowingReporter() {
+        contextRunner.withPropertyValues(
+                "transaction-guard.transaction.max-duration=750ms",
+                "transaction-guard.external-call.slow-threshold=250ms",
+                "transaction-guard.violation.mode=throw"
+        ).run(context -> {
+            TransactionGuardProperties properties = context.getBean(TransactionGuardProperties.class);
+            assertEquals(Duration.ofMillis(750), properties.getTransaction().getMaxDuration());
+            assertEquals(Duration.ofMillis(250), properties.getExternalCall().getSlowThreshold());
+            assertInstanceOf(ThrowingTransactionGuardReporter.class,
+                    context.getBean(TransactionGuardReporter.class));
+        });
+    }
+
+    @Test
+    void rejectsNegativeDurationConfiguration() {
+        contextRunner.withPropertyValues("transaction-guard.transaction.max-duration=-1ms")
+                .run(context -> assertNotNull(context.getStartupFailure()));
+    }
+
+    @Test
+    void backsOffForApplicationReporter() {
+        contextRunner.withUserConfiguration(CustomReporterConfiguration.class).run(context -> {
+            assertEquals(1, context.getBeansOfType(TransactionGuardReporter.class).size());
+            assertInstanceOf(CapturingReporter.class, context.getBean(TransactionGuardReporter.class));
+        });
+    }
+
+    @Test
+    void disablesHttpPoliciesAndInstrumentationOnly() {
+        contextRunner.withPropertyValues("transaction-guard.external-call.enabled=false").run(context -> {
+            assertEquals(1, context.getBeansOfType(TransactionGuardPolicy.class).size());
+            assertTrue(context.getBeansOfType(TransactionGuardHttpInterceptor.class).isEmpty());
+            assertTrue(context.getBeansOfType(TransactionGuardRestClientCustomizer.class).isEmpty());
+            assertEquals(1, context.getBeansOfType(TransactionObservation.class).size());
+        });
+    }
+
+    @Test
+    void contributesCustomizerToBootManagedRestClientBuilders() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        RestClientAutoConfiguration.class,
+                        TransactionGuardAutoConfiguration.class
+                ))
+                .run(context -> {
+                    assertEquals(1, context.getBeansOfType(TransactionGuardRestClientCustomizer.class).size());
+                    assertFalse(context.getBeansOfType(org.springframework.web.client.RestClient.Builder.class)
+                            .isEmpty());
+                });
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class CustomReporterConfiguration {
+        @Bean
+        TransactionGuardReporter customReporter() {
+            return new CapturingReporter();
+        }
+    }
+
+    static final class CapturingReporter implements TransactionGuardReporter {
+        @Override
+        public void report(List<io.github.zzangjyj0818.transactionguard.core.model.TransactionGuardViolation> violations) {
+        }
+    }
+}
