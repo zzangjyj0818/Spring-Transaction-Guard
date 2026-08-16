@@ -91,10 +91,12 @@ public class TransactionGuardAutoConfiguration {
             ActualTransactionDetector detector,
             TransactionGuardContextRegistry registry,
             ObjectProvider<TransactionGuardPolicy> policies,
-            TransactionGuardReporter reporter
+            TransactionGuardReporter reporter,
+            TransactionGuardProperties properties
     ) {
         List<TransactionGuardPolicy> policyList = policies.orderedStream().toList();
-        return new TransactionObservation(detector, registry, policyList, reporter);
+        boolean propagateGuardFailures = properties.getViolation().getMode() == TransactionGuardProperties.Mode.THROW;
+        return new TransactionObservation(detector, registry, policyList, reporter, propagateGuardFailures);
     }
 
     /** Creates the transactional entry point aspect. */

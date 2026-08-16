@@ -10,6 +10,12 @@
 - Starter 기반 end-to-end 통합 테스트
 - query, header, body 민감정보 회귀 검증
 - 설치, 설정, 아키텍처, 지원 범위 문서
+- Maven Central publication metadata와 태그 기반 release workflow
+
+### Changed
+
+- LOG 모드에서 Guard 내부 Policy/Reporter 실패를 격리해 비즈니스 흐름 유지
+- THROW 모드가 commit 전에 위반 예외를 전달해 트랜잭션을 중단하도록 의미 명확화
 
 ## [0.1.0] - 2026-08-16
 

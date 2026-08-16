@@ -8,6 +8,8 @@ import io.github.zzangjyj0818.transactionguard.core.policy.TransactionGuardPolic
 import io.github.zzangjyj0818.transactionguard.core.reporter.TransactionGuardReporter;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,12 +20,15 @@ import java.util.function.Supplier;
 /** Registers exactly one guard observation for the current Spring transaction. */
 public final class TransactionObservation {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransactionObservation.class);
+
     private final ActualTransactionDetector transactionDetector;
     private final TransactionGuardContextRegistry contextRegistry;
     private final MonotonicClock clock;
     private final Supplier<String> transactionIdGenerator;
     private final List<TransactionGuardPolicy> policies;
     private final TransactionGuardReporter reporter;
+    private final boolean propagateGuardFailures;
 
     /**
      * Creates a transaction observation using UUID identifiers and the system monotonic clock.
@@ -40,7 +45,27 @@ public final class TransactionObservation {
             TransactionGuardReporter reporter
     ) {
         this(transactionDetector, contextRegistry, MonotonicClock.system(),
-                () -> UUID.randomUUID().toString(), policies, reporter);
+                () -> UUID.randomUUID().toString(), policies, reporter, false);
+    }
+
+    /**
+     * Creates a transaction observation with an explicit Guard failure strategy.
+     *
+     * @param transactionDetector actual transaction detector
+     * @param contextRegistry transaction resource registry
+     * @param policies policies evaluated after completion
+     * @param reporter violation reporter
+     * @param propagateGuardFailures whether policy and reporter failures should be propagated
+     */
+    public TransactionObservation(
+            ActualTransactionDetector transactionDetector,
+            TransactionGuardContextRegistry contextRegistry,
+            List<TransactionGuardPolicy> policies,
+            TransactionGuardReporter reporter,
+            boolean propagateGuardFailures
+    ) {
+        this(transactionDetector, contextRegistry, MonotonicClock.system(),
+                () -> UUID.randomUUID().toString(), policies, reporter, propagateGuardFailures);
     }
 
     TransactionObservation(
@@ -49,7 +74,8 @@ public final class TransactionObservation {
             MonotonicClock clock,
             Supplier<String> transactionIdGenerator,
             List<TransactionGuardPolicy> policies,
-            TransactionGuardReporter reporter
+            TransactionGuardReporter reporter,
+            boolean propagateGuardFailures
     ) {
         this.transactionDetector = Objects.requireNonNull(transactionDetector, "transactionDetector must not be null");
         this.contextRegistry = Objects.requireNonNull(contextRegistry, "contextRegistry must not be null");
@@ -58,6 +84,7 @@ public final class TransactionObservation {
                 transactionIdGenerator, "transactionIdGenerator must not be null");
         this.policies = List.copyOf(Objects.requireNonNull(policies, "policies must not be null"));
         this.reporter = Objects.requireNonNull(reporter, "reporter must not be null");
+        this.propagateGuardFailures = propagateGuardFailures;
     }
 
     /**
@@ -115,18 +142,34 @@ public final class TransactionObservation {
         }
 
         @Override
+        public void beforeCommit(boolean readOnly) {
+            if (propagateGuardFailures) {
+                evaluateAndReport(STATUS_UNKNOWN);
+            }
+        }
+
+        @Override
         public void afterCompletion(int status) {
             try {
-                TransactionSnapshot snapshot = context.snapshot(clock.nanoTime(), outcome(status));
-                List<TransactionGuardViolation> violations = new ArrayList<>();
-                for (TransactionGuardPolicy policy : policies) {
-                    violations.addAll(Objects.requireNonNull(
-                            policy.evaluate(snapshot), "policy result must not be null"));
+                if (!propagateGuardFailures) {
+                    evaluateAndReport(status);
                 }
-                reporter.report(List.copyOf(violations));
+            } catch (RuntimeException | Error guardFailure) {
+                LOGGER.error("Transaction Guard failed after transaction completion; business flow is preserved",
+                        guardFailure);
             } finally {
                 contextRegistry.unbindIfCurrent(context);
             }
+        }
+
+        private void evaluateAndReport(int status) {
+            TransactionSnapshot snapshot = context.snapshot(clock.nanoTime(), outcome(status));
+            List<TransactionGuardViolation> violations = new ArrayList<>();
+            for (TransactionGuardPolicy policy : policies) {
+                violations.addAll(Objects.requireNonNull(
+                        policy.evaluate(snapshot), "policy result must not be null"));
+            }
+            reporter.report(List.copyOf(violations));
         }
 
         private TransactionOutcome outcome(int status) {

@@ -1,10 +1,11 @@
 plugins {
     base
     id("org.springframework.boot") version "4.1.0" apply false
+    id("com.vanniktech.maven.publish") version "0.37.0" apply false
 }
 
 group = "io.github.zzangjyj0818"
-version = "0.1.0-SNAPSHOT"
+version = "0.1.0"
 
 val springBootVersion = "4.1.0"
 
@@ -19,7 +20,7 @@ subprojects {
     }
 
     dependencies {
-        "implementation"(platform("org.springframework.boot:spring-boot-dependencies:$springBootVersion"))
+        "api"(platform("org.springframework.boot:spring-boot-dependencies:$springBootVersion"))
         "annotationProcessor"(platform("org.springframework.boot:spring-boot-dependencies:$springBootVersion"))
         "testImplementation"(platform("org.springframework.boot:spring-boot-dependencies:$springBootVersion"))
         "testImplementation"("org.junit.jupiter:junit-jupiter")
@@ -30,11 +31,13 @@ subprojects {
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
         }
-        withSourcesJar()
-        withJavadocJar()
     }
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+    }
+
+    if (name != "transaction-guard-example") {
+        apply(plugin = "com.vanniktech.maven.publish")
     }
 }
