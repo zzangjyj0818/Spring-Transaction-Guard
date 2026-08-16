@@ -132,6 +132,48 @@ class TransactionObservationTest {
         assertTrue(registry.currentContext().isEmpty());
     }
 
+    @Test
+    void notifiesCompletionListenerExactlyOnceWithEvaluatedViolations() {
+        List<TransactionSnapshot> snapshots = new ArrayList<>();
+        List<List<TransactionGuardViolation>> capturedViolations = new ArrayList<>();
+        TransactionGuardPolicy policy = snapshot -> List.of(new TransactionGuardViolation(
+                io.github.zzangjyj0818.transactionguard.core.model.ViolationType.LONG_TRANSACTION.code(),
+                io.github.zzangjyj0818.transactionguard.core.model.ViolationType.LONG_TRANSACTION,
+                io.github.zzangjyj0818.transactionguard.core.model.ViolationSeverity.WARN,
+                "long transaction", snapshot, java.util.Map.of()));
+        TransactionObservation observation = new TransactionObservation(
+                new ActualTransactionDetector(), registry, new SequenceClock(10, 30), () -> "tx-test",
+                List.of(policy), violations -> { },
+                List.of((snapshot, violations) -> {
+                    snapshots.add(snapshot);
+                    capturedViolations.add(violations);
+                }), false);
+
+        observation.observe(entryPoint());
+        complete(TransactionSynchronization.STATUS_COMMITTED);
+
+        assertEquals(1, snapshots.size());
+        assertEquals(Duration.ofNanos(20), snapshots.getFirst().duration());
+        assertEquals(List.of("TG001"), capturedViolations.getFirst().stream()
+                .map(TransactionGuardViolation::code).toList());
+    }
+
+    @Test
+    void listenerFailureNeverChangesThrowModeReporterBehavior() {
+        TransactionObservation observation = new TransactionObservation(
+                new ActualTransactionDetector(), registry, new SequenceClock(10, 20), () -> "tx-test",
+                List.of(new CapturingPolicy()), violations -> { },
+                List.of((snapshot, violations) -> {
+                    throw new IllegalStateException("metrics failure");
+                }), true);
+        observation.observe(entryPoint());
+
+        beforeCommit();
+        complete(TransactionSynchronization.STATUS_COMMITTED);
+
+        assertTrue(registry.currentContext().isEmpty());
+    }
+
     private TransactionObservation observation(MonotonicClock clock, TransactionGuardPolicy policy) {
         return new TransactionObservation(
                 new ActualTransactionDetector(),

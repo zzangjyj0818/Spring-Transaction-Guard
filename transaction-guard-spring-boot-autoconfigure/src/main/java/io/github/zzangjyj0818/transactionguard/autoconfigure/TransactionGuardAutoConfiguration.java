@@ -15,6 +15,7 @@ import io.github.zzangjyj0818.transactionguard.spring.http.TransactionGuardRestC
 import io.github.zzangjyj0818.transactionguard.spring.transaction.ActualTransactionDetector;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionGuardContextRegistry;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservation;
+import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservationListener;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -111,11 +112,14 @@ public class TransactionGuardAutoConfiguration {
             TransactionGuardContextRegistry registry,
             ObjectProvider<TransactionGuardPolicy> policies,
             TransactionGuardReporter reporter,
+            ObjectProvider<TransactionObservationListener> listeners,
             TransactionGuardProperties properties
     ) {
         List<TransactionGuardPolicy> policyList = policies.orderedStream().toList();
+        List<TransactionObservationListener> listenerList = listeners.orderedStream().toList();
         boolean propagateGuardFailures = properties.getViolation().getMode() == TransactionGuardProperties.Mode.THROW;
-        return new TransactionObservation(detector, registry, policyList, reporter, propagateGuardFailures);
+        return new TransactionObservation(
+                detector, registry, policyList, reporter, listenerList, propagateGuardFailures);
     }
 
     /** Creates the transactional entry point aspect. */
