@@ -14,6 +14,7 @@ import io.github.zzangjyj0818.transactionguard.spring.aop.TransactionGuardAspect
 import io.github.zzangjyj0818.transactionguard.spring.http.TransactionGuardHttpInterceptor;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservation;
 import io.github.zzangjyj0818.transactionguard.autoconfigure.metrics.TransactionGuardMetrics;
+import io.github.zzangjyj0818.transactionguard.autoconfigure.endpoint.TransactionGuardEndpoint;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -209,6 +210,42 @@ class TransactionGuardAutoConfigurationTest {
                 .withBean(SimpleMeterRegistry.class, SimpleMeterRegistry::new)
                 .withPropertyValues("transaction-guard.enabled=false")
                 .run(context -> assertTrue(context.getBeansOfType(TransactionGuardMetrics.class).isEmpty()));
+    }
+
+    @Test
+    void createsActuatorEndpointOnlyWithMetricsRegistryAndAvailableEndpoint() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        TransactionGuardMetricsAutoConfiguration.class,
+                        TransactionGuardAutoConfiguration.class,
+                        TransactionGuardEndpointAutoConfiguration.class))
+                .withBean(SimpleMeterRegistry.class, SimpleMeterRegistry::new)
+                .withPropertyValues(
+                        "management.endpoint.transactionguard.access=READ_ONLY",
+                        "management.endpoints.web.exposure.include=transactionguard")
+                .run(context -> assertEquals(1,
+                        context.getBeansOfType(TransactionGuardEndpoint.class).size()));
+
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        TransactionGuardMetricsAutoConfiguration.class,
+                        TransactionGuardAutoConfiguration.class,
+                        TransactionGuardEndpointAutoConfiguration.class))
+                .run(context -> assertTrue(
+                        context.getBeansOfType(TransactionGuardEndpoint.class).isEmpty()));
+    }
+
+    @Test
+    void respectsActuatorEndpointAccessPolicy() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        TransactionGuardMetricsAutoConfiguration.class,
+                        TransactionGuardAutoConfiguration.class,
+                        TransactionGuardEndpointAutoConfiguration.class))
+                .withBean(SimpleMeterRegistry.class, SimpleMeterRegistry::new)
+                .withPropertyValues("management.endpoint.transactionguard.access=NONE")
+                .run(context -> assertTrue(
+                        context.getBeansOfType(TransactionGuardEndpoint.class).isEmpty()));
     }
 
     @Configuration(proxyBeanMethods = false)
