@@ -1,8 +1,8 @@
 # Spring Transaction Guard
 
-Spring Transaction Guard detects risky patterns in imperative Spring transactions: long-running transactions and synchronous `RestClient` or OpenFeign calls made while a transaction is active.
+Spring Transaction Guard detects risky patterns in imperative Spring transactions: long transactions, HTTP/Redis/Kafka I/O, excessive JDBC queries, and experimental query-budget violations.
 
-Spring Transaction Guard는 명령형 Spring 트랜잭션의 장시간 실행과 트랜잭션 내부의 동기식 `RestClient` 또는 OpenFeign 호출을 감지합니다.
+Spring Transaction Guard는 명령형 Spring 트랜잭션의 장시간 실행, HTTP/Redis/Kafka I/O, 과도한 JDBC query와 실험적 Query Budget 위반을 감지합니다.
 
 ## Documentation / 공식 문서
 
@@ -16,6 +16,11 @@ Spring Transaction Guard는 명령형 Spring 트랜잭션의 장시간 실행과
 | `TG001` | Long transaction / 장시간 트랜잭션 |
 | `TG002` | HTTP call inside a transaction / 트랜잭션 내부 HTTP 호출 |
 | `TG003` | Slow HTTP call inside a transaction / 트랜잭션 내부의 느린 HTTP 호출 |
+| `TG004` | Redis operation inside a transaction / 트랜잭션 내부 Redis 작업 |
+| `TG005` | Slow Redis operation / 느린 Redis 작업 |
+| `TG006` | Kafka producer completion inside a transaction / 트랜잭션 내부 Kafka producer 완료 |
+| `TG007` | Slow Kafka producer completion / 느린 Kafka producer 완료 |
+| `TG008` | Experimental JDBC Query Budget exceeded / 실험적 JDBC Query Budget 초과 |
 
 The library observes and reports risks. It does not rewrite transaction boundaries, cancel HTTP calls, or replace the transaction manager.
 
@@ -28,6 +33,7 @@ The library observes and reports risks. It does not rewrite transaction boundari
 | 0.1.x | 21+ | 4.1.x | 7.0.x |
 | 0.2.x | 21+ | 4.1.x | 7.0.x |
 | 0.3.x | 21+ | 4.1.x | 7.0.x |
+| 0.4.x | 21+ | 4.1.x | 7.0.x |
 
 ## License / 라이선스
 

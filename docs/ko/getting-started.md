@@ -8,7 +8,7 @@ Gradle Kotlin DSL:
 
 ```kotlin
 dependencies {
-    implementation("io.github.zzangjyj0818:transaction-guard-spring-boot-starter:0.1.0")
+    implementation("io.github.zzangjyj0818:transaction-guard-spring-boot-starter:<version>")
 }
 ```
 
@@ -18,11 +18,11 @@ Maven:
 <dependency>
   <groupId>io.github.zzangjyj0818</groupId>
   <artifactId>transaction-guard-spring-boot-starter</artifactId>
-  <version>0.1.0</version>
+  <version>&lt;version&gt;</version>
 </dependency>
 ```
 
-Starter는 별도 활성화 애노테이션 없이 자동 설정됩니다. 기본 설정은 즉시 사용할 수 있으며 필요하면 [설정 레퍼런스](configuration.md)를 참고하세요.
+Starter는 별도 활성화 애노테이션 없이 자동 설정됩니다. 먼저 기본 LOG 모드로 도입하고 로그와 메트릭을 확인한 뒤 임계값, allow/ignore 및 Query Budget을 조정하는 방식을 권장합니다. 전체 설정은 [설정 레퍼런스](configuration.md), Redis/Kafka/JDBC는 [I/O 관측 가이드](io-observation.md)를 참고하세요.
 
 ## 2. RestClient 생성
 
@@ -52,7 +52,31 @@ PaymentsClient paymentsClient(TransactionGuardFeignCapability capability) {
 
 Capability는 내부 blocking Feign client를 감싸며 원본 Feign 및 transport 예외를 보존합니다. RestClient와 동일한 정제, Ignore, Allow, threshold 규칙이 적용됩니다.
 
-## 4. 예제 실행
+## 4. Redis, Kafka, JDBC 사용
+
+애플리케이션의 기존 Spring-managed client를 그대로 사용하면 조건부 자동 구성이 적용됩니다. Redis/Kafka/JDBC 의존성, 코드 예제, counting 기준과 비동기 제한은 [Redis, Kafka, JDBC 관측 사용법](io-observation.md)을 참고하세요.
+
+## 5. 최소 운영 설정
+
+```yaml
+transaction-guard:
+  enabled: true
+  violation:
+    mode: log
+
+management:
+  endpoint:
+    transactionguard:
+      access: READ_ONLY
+  endpoints:
+    web:
+      exposure:
+        include: health,transactionguard
+```
+
+THROW 모드는 commit을 막을 수 있으므로 기본 도입 단계에서는 LOG를 사용하세요.
+
+## 6. 예제 실행
 
 ```bash
 ./gradlew :transaction-guard-example:bootRun

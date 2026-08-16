@@ -8,7 +8,7 @@ Gradle Kotlin DSL:
 
 ```kotlin
 dependencies {
-    implementation("io.github.zzangjyj0818:transaction-guard-spring-boot-starter:0.1.0")
+    implementation("io.github.zzangjyj0818:transaction-guard-spring-boot-starter:<version>")
 }
 ```
 
@@ -18,11 +18,11 @@ Maven:
 <dependency>
   <groupId>io.github.zzangjyj0818</groupId>
   <artifactId>transaction-guard-spring-boot-starter</artifactId>
-  <version>0.1.0</version>
+  <version>&lt;version&gt;</version>
 </dependency>
 ```
 
-The starter is auto-configured without an enable annotation. The defaults work immediately; see the [Configuration Reference](configuration.md) to customize them.
+The starter is auto-configured without an enable annotation. Start in the default LOG mode, inspect logs and metrics, then tune thresholds, allow/ignore rules, and Query Budget. See the [Configuration Reference](configuration.md) and the [Redis, Kafka, and JDBC guide](io-observation.md).
 
 ## 2. Create a RestClient
 
@@ -52,7 +52,31 @@ PaymentsClient paymentsClient(TransactionGuardFeignCapability capability) {
 
 The capability decorates the underlying blocking Feign client. It preserves original Feign and transport exceptions and applies the same sanitization, ignore, allow, and threshold rules as RestClient.
 
-## 4. Run the example
+## 4. Use Redis, Kafka, and JDBC
+
+Conditional auto-configuration applies to the Spring-managed clients already used by the application. See [Using Redis, Kafka, and JDBC Observation](io-observation.md) for dependencies, code examples, counting rules, and asynchronous limitations.
+
+## 5. Minimal production setup
+
+```yaml
+transaction-guard:
+  enabled: true
+  violation:
+    mode: log
+
+management:
+  endpoint:
+    transactionguard:
+      access: READ_ONLY
+  endpoints:
+    web:
+      exposure:
+        include: health,transactionguard
+```
+
+THROW mode can prevent a commit. Use LOG during initial production adoption.
+
+## 6. Run the example
 
 ```bash
 ./gradlew :transaction-guard-example:bootRun
