@@ -5,6 +5,8 @@ import io.github.zzangjyj0818.transactionguard.core.policy.ExternalCallRuleMatch
 import io.github.zzangjyj0818.transactionguard.core.policy.LongTransactionPolicy;
 import io.github.zzangjyj0818.transactionguard.core.policy.SlowExternalHttpCallPolicy;
 import io.github.zzangjyj0818.transactionguard.core.policy.TransactionGuardPolicy;
+import io.github.zzangjyj0818.transactionguard.core.policy.RedisOperationPolicy;
+import io.github.zzangjyj0818.transactionguard.core.policy.SlowRedisOperationPolicy;
 import io.github.zzangjyj0818.transactionguard.core.reporter.LoggingTransactionGuardReporter;
 import io.github.zzangjyj0818.transactionguard.core.reporter.ThrowingTransactionGuardReporter;
 import io.github.zzangjyj0818.transactionguard.core.reporter.TransactionGuardReporter;
@@ -16,6 +18,8 @@ import io.github.zzangjyj0818.transactionguard.spring.transaction.ActualTransact
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionGuardContextRegistry;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservation;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionObservationListener;
+import io.github.zzangjyj0818.transactionguard.spring.redis.TransactionGuardRedisAspect;
+import io.github.zzangjyj0818.transactionguard.spring.redis.TransactionGuardRedisRecorder;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -93,6 +97,48 @@ public class TransactionGuardAutoConfiguration {
                 () -> new SlowExternalHttpCallPolicy(
                         properties.getExternalCall().getSlowThreshold(),
                         call -> !ruleMatcher.isAllowed(call)));
+    }
+
+    /** Creates TG004 when imperative Redis observation is enabled. */
+    @Bean("transactionGuardRedisOperationPolicy")
+    @ConditionalOnMissingBean(name = "transactionGuardRedisOperationPolicy")
+    @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisOperations")
+    @ConditionalOnProperty(prefix = "transaction-guard.redis", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardPolicy transactionGuardRedisOperationPolicy(TransactionGuardProperties properties) {
+        return configuredPolicy(properties, TransactionGuardProperties.ViolationCode.TG004,
+                RedisOperationPolicy::new);
+    }
+
+    /** Creates TG005 using the configured Redis duration threshold. */
+    @Bean("transactionGuardSlowRedisOperationPolicy")
+    @ConditionalOnMissingBean(name = "transactionGuardSlowRedisOperationPolicy")
+    @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisOperations")
+    @ConditionalOnProperty(prefix = "transaction-guard.redis", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardPolicy transactionGuardSlowRedisOperationPolicy(TransactionGuardProperties properties) {
+        return configuredPolicy(properties, TransactionGuardProperties.ViolationCode.TG005,
+                () -> new SlowRedisOperationPolicy(properties.getRedis().getSlowThreshold()));
+    }
+
+    /** Creates the privacy-safe Redis operation recorder. */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisOperations")
+    @ConditionalOnProperty(prefix = "transaction-guard.redis", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardRedisRecorder transactionGuardRedisRecorder(TransactionGuardContextRegistry registry) {
+        return new TransactionGuardRedisRecorder(registry);
+    }
+
+    /** Instruments Spring Data Redis operation interfaces. */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisOperations")
+    @ConditionalOnProperty(prefix = "transaction-guard.redis", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardRedisAspect transactionGuardRedisAspect(TransactionGuardRedisRecorder recorder) {
+        return new TransactionGuardRedisAspect(recorder);
     }
 
     /** Creates the configured default Reporter unless the application supplies one. */

@@ -10,6 +10,7 @@ dependencies {
     compileOnly("io.micrometer:micrometer-core")
     compileOnly("org.springframework.boot:spring-boot-actuator")
     compileOnly("org.springframework.boot:spring-boot-actuator-autoconfigure")
+    compileOnly("org.springframework.data:spring-data-redis")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-test")
     testImplementation("org.springframework.boot:spring-boot-restclient")
@@ -18,5 +19,6 @@ dependencies {
     testImplementation("io.micrometer:micrometer-core")
     testImplementation("org.springframework.boot:spring-boot-actuator")
     testImplementation("org.springframework.boot:spring-boot-actuator-autoconfigure")
+    testImplementation("org.springframework.data:spring-data-redis")
     testImplementation("org.assertj:assertj-core")
 }

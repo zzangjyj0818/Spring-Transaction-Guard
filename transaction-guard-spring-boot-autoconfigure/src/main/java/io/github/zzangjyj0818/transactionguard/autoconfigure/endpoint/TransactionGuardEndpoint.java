@@ -4,6 +4,7 @@ import io.github.zzangjyj0818.transactionguard.autoconfigure.TransactionGuardPro
 import io.github.zzangjyj0818.transactionguard.autoconfigure.metrics.TransactionGuardMetrics;
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallOutcome;
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalClientType;
+import io.github.zzangjyj0818.transactionguard.core.model.RedisCommandCategory;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionOutcome;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -50,6 +51,8 @@ public final class TransactionGuardEndpoint {
                 properties.getTransaction().getMaxDuration().toNanos(),
                 externalCall.isEnabled(),
                 externalCall.getSlowThreshold().toNanos(),
+                properties.getRedis().isEnabled(),
+                properties.getRedis().getSlowThreshold().toNanos(),
                 disabledCodes,
                 new RuleCounts(
                         externalCall.getIgnoreHosts().size(),
@@ -86,7 +89,21 @@ public final class TransactionGuardEndpoint {
                                 "client_type", client, "outcome", result)));
             }
         }
-        return new Metrics(Map.copyOf(transactions), Map.copyOf(violations), Map.copyOf(externalHttp));
+        Map<String, ExternalHttpValue> redis = new LinkedHashMap<>();
+        for (RedisCommandCategory category : RedisCommandCategory.values()) {
+            for (ExternalCallOutcome outcome : ExternalCallOutcome.values()) {
+                String command = tag(category);
+                String result = tag(outcome);
+                Counter counter = registry.find(TransactionGuardMetrics.REDIS_TOTAL)
+                        .tags("command_category", command, "outcome", result).counter();
+                redis.put(command + ":" + result, new ExternalHttpValue(
+                        counter == null ? 0L : Math.round(counter.count()),
+                        timer(TransactionGuardMetrics.REDIS_DURATION,
+                                "command_category", command, "outcome", result)));
+            }
+        }
+        return new Metrics(Map.copyOf(transactions), Map.copyOf(violations),
+                Map.copyOf(externalHttp), Map.copyOf(redis));
     }
 
     private TimerValue timer(String name, String... tags) {
@@ -115,6 +132,8 @@ public final class TransactionGuardEndpoint {
             long transactionMaxDurationNanos,
             boolean externalCallEnabled,
             long externalCallSlowThresholdNanos,
+            boolean redisEnabled,
+            long redisSlowThresholdNanos,
             Set<String> disabledViolationCodes,
             RuleCounts ruleCounts
     ) {
@@ -128,7 +147,8 @@ public final class TransactionGuardEndpoint {
     public record Metrics(
             Map<String, TimerValue> transactions,
             Map<String, Long> violations,
-            Map<String, ExternalHttpValue> externalHttp
+            Map<String, ExternalHttpValue> externalHttp,
+            Map<String, ExternalHttpValue> redis
     ) {
     }
 

@@ -7,7 +7,11 @@ public enum ViolationType {
     /** External HTTP call occurred while a transaction was active. */
     EXTERNAL_HTTP_CALL_IN_TRANSACTION("TG002"),
     /** External HTTP call duration exceeded its configured limit. */
-    SLOW_EXTERNAL_HTTP_CALL_IN_TRANSACTION("TG003");
+    SLOW_EXTERNAL_HTTP_CALL_IN_TRANSACTION("TG003"),
+    /** Redis operation occurred while a transaction was active. */
+    REDIS_OPERATION_IN_TRANSACTION("TG004"),
+    /** Redis operation duration exceeded its configured limit. */
+    SLOW_REDIS_OPERATION_IN_TRANSACTION("TG005");
 
     private final String code;
 
