@@ -1,8 +1,8 @@
 # Spring Transaction Guard
 
-Spring Transaction Guard detects risky patterns in imperative Spring transactions: long-running transactions and synchronous `RestClient` calls made while a transaction is active.
+Spring Transaction Guard detects risky patterns in imperative Spring transactions: long-running transactions and synchronous `RestClient` or OpenFeign calls made while a transaction is active.
 
-Spring Transaction Guard는 명령형 Spring 트랜잭션의 장시간 실행과 트랜잭션 내부의 동기식 `RestClient` 호출을 감지합니다.
+Spring Transaction Guard는 명령형 Spring 트랜잭션의 장시간 실행과 트랜잭션 내부의 동기식 `RestClient` 또는 OpenFeign 호출을 감지합니다.
 
 ## Documentation / 공식 문서
 
@@ -26,6 +26,7 @@ The library observes and reports risks. It does not rewrite transaction boundari
 | Transaction Guard | Java | Spring Boot | Spring Framework |
 |---|---:|---:|---:|
 | 0.1.x | 21+ | 4.1.x | 7.0.x |
+| 0.2.x | 21+ | 4.1.x | 7.0.x |
 
 ## License / 라이선스
 

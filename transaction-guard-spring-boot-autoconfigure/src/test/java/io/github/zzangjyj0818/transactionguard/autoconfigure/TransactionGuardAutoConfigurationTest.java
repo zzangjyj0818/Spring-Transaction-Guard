@@ -1,6 +1,12 @@
 package io.github.zzangjyj0818.transactionguard.autoconfigure;
 
 import io.github.zzangjyj0818.transactionguard.core.policy.TransactionGuardPolicy;
+import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallObservation;
+import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallOutcome;
+import io.github.zzangjyj0818.transactionguard.core.model.ExternalClientType;
+import io.github.zzangjyj0818.transactionguard.core.model.TransactionEntryPoint;
+import io.github.zzangjyj0818.transactionguard.core.model.TransactionOutcome;
+import io.github.zzangjyj0818.transactionguard.core.model.TransactionSnapshot;
 import io.github.zzangjyj0818.transactionguard.core.reporter.LoggingTransactionGuardReporter;
 import io.github.zzangjyj0818.transactionguard.core.reporter.ThrowingTransactionGuardReporter;
 import io.github.zzangjyj0818.transactionguard.core.reporter.TransactionGuardReporter;
@@ -110,6 +116,38 @@ class TransactionGuardAutoConfigurationTest {
     void rejectsUnknownDisabledViolationCode() {
         contextRunner.withPropertyValues("transaction-guard.violation.disabled-codes[0]=TG999")
                 .run(context -> assertNotNull(context.getStartupFailure()));
+    }
+
+    @Test
+    void disabledCodesAndAllowRulesSuppressOnlyConfiguredViolations() {
+        contextRunner.withPropertyValues(
+                "transaction-guard.transaction.max-duration=1ns",
+                "transaction-guard.external-call.slow-threshold=1ns",
+                "transaction-guard.external-call.allow-hosts[0]=payments.example.com",
+                "transaction-guard.violation.disabled-codes[0]=TG001"
+        ).run(context -> {
+            TransactionSnapshot snapshot = new TransactionSnapshot(
+                    "tx-1",
+                    new TransactionEntryPoint("Example", "call", "Example#call"),
+                    Duration.ofSeconds(1),
+                    TransactionOutcome.COMMITTED,
+                    List.of(new ExternalCallObservation(
+                            ExternalClientType.REST_CLIENT,
+                            "GET",
+                            "payments.example.com",
+                            "/payments",
+                            Duration.ofSeconds(1).toNanos(),
+                            ExternalCallOutcome.SUCCESS,
+                            null)));
+
+            List<String> codes = context.getBeansOfType(TransactionGuardPolicy.class).values().stream()
+                    .flatMap(policy -> policy.evaluate(snapshot).stream())
+                    .map(violation -> violation.code())
+                    .toList();
+
+            assertEquals(List.of(), codes);
+            assertEquals(1, snapshot.externalCalls().size());
+        });
     }
 
     @Test

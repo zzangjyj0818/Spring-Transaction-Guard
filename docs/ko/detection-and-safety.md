@@ -10,6 +10,8 @@
 | `TG002` | `EXTERNAL_HTTP_CALL_IN_TRANSACTION` | 활성 트랜잭션 안에서 `RestClient` 호출 |
 | `TG003` | `SLOW_EXTERNAL_HTTP_CALL_IN_TRANSACTION` | 트랜잭션 안의 `RestClient` 호출이 `slow-threshold`를 초과 |
 
+TG002와 TG003은 지원하는 blocking client인 Spring `RestClient`와 OpenFeign에 적용됩니다. Allow 대상은 Snapshot에 남지만 두 정책에서는 제외되고, Ignore 대상은 기록하지 않습니다.
+
 REQUIRED 중첩 호출은 같은 실제 트랜잭션 Context를 재사용하고 REQUIRES_NEW는 별도 Context를 사용합니다. NOT_SUPPORTED로 트랜잭션이 중단된 구간의 HTTP 호출은 기록하지 않습니다.
 
 ## LOG와 THROW

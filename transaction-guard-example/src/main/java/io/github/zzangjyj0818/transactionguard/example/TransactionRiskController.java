@@ -52,6 +52,12 @@ public class TransactionRiskController {
         return scenarios.slowExternalCallInTransaction();
     }
 
+    /** Runs the OpenFeign TG002 example. */
+    @GetMapping("/guard/feign")
+    public String feign() {
+        return scenarios.openFeignCallInTransaction();
+    }
+
     /**
      * Simulates a fast downstream endpoint.
      *
