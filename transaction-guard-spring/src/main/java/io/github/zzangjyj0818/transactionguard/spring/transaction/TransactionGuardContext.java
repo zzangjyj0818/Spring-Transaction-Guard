@@ -2,6 +2,7 @@ package io.github.zzangjyj0818.transactionguard.spring.transaction;
 
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.RedisOperationObservation;
+import io.github.zzangjyj0818.transactionguard.core.model.KafkaProducerObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionEntryPoint;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionOutcome;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionSnapshot;
@@ -20,6 +21,7 @@ public final class TransactionGuardContext {
     private final String threadName;
     private final List<ExternalCallObservation> externalCalls = new ArrayList<>();
     private final List<RedisOperationObservation> redisOperations = new ArrayList<>();
+    private final List<KafkaProducerObservation> kafkaProducerCalls = new ArrayList<>();
 
     TransactionGuardContext(
             String transactionId,
@@ -81,6 +83,11 @@ public final class TransactionGuardContext {
         redisOperations.add(Objects.requireNonNull(observation, "observation must not be null"));
     }
 
+    /** Adds a privacy-safe Kafka producer call observation. */
+    public void addKafkaProducerCall(KafkaProducerObservation observation) {
+        kafkaProducerCalls.add(Objects.requireNonNull(observation, "observation must not be null"));
+    }
+
     TransactionSnapshot snapshot(long completedAtNanos, TransactionOutcome outcome) {
         long elapsedNanos = completedAtNanos >= startedAtNanos
                 ? completedAtNanos - startedAtNanos
@@ -91,7 +98,8 @@ public final class TransactionGuardContext {
                 Duration.ofNanos(elapsedNanos),
                 outcome,
                 externalCalls,
-                redisOperations
+                redisOperations,
+                kafkaProducerCalls
         );
     }
 }

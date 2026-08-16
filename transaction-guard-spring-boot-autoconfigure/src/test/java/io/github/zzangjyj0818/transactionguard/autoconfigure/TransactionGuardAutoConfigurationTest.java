@@ -44,7 +44,7 @@ class TransactionGuardAutoConfigurationTest {
             assertTrue(context.isRunning());
             assertEquals(1, context.getBeansOfType(TransactionObservation.class).size());
             assertEquals(1, context.getBeansOfType(TransactionGuardAspect.class).size());
-            assertEquals(5, context.getBeansOfType(TransactionGuardPolicy.class).size());
+            assertEquals(7, context.getBeansOfType(TransactionGuardPolicy.class).size());
             assertInstanceOf(LoggingTransactionGuardReporter.class,
                     context.getBean(TransactionGuardReporter.class));
 
@@ -166,7 +166,7 @@ class TransactionGuardAutoConfigurationTest {
     @Test
     void disablesHttpPoliciesAndInstrumentationOnly() {
         contextRunner.withPropertyValues("transaction-guard.external-call.enabled=false").run(context -> {
-            assertEquals(3, context.getBeansOfType(TransactionGuardPolicy.class).size());
+            assertEquals(5, context.getBeansOfType(TransactionGuardPolicy.class).size());
             assertTrue(context.getBeansOfType(TransactionGuardHttpInterceptor.class).isEmpty());
             assertTrue(context.getBeansOfType(TransactionGuardRestClientCustomizer.class).isEmpty());
             assertEquals(1, context.getBeansOfType(TransactionObservation.class).size());

@@ -11,6 +11,7 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-actuator")
     compileOnly("org.springframework.boot:spring-boot-actuator-autoconfigure")
     compileOnly("org.springframework.data:spring-data-redis")
+    compileOnly("org.springframework.kafka:spring-kafka")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-test")
     testImplementation("org.springframework.boot:spring-boot-restclient")
@@ -20,5 +21,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-actuator")
     testImplementation("org.springframework.boot:spring-boot-actuator-autoconfigure")
     testImplementation("org.springframework.data:spring-data-redis")
+    testImplementation("org.springframework.kafka:spring-kafka")
     testImplementation("org.assertj:assertj-core")
 }

@@ -62,7 +62,7 @@ class TransactionGuardEndpointTest {
 
         assertEquals(Set.of("committed", "rolled_back", "unknown"),
                 result.metrics().transactions().keySet());
-        assertEquals(Set.of("TG001", "TG002", "TG003", "TG004", "TG005"),
+        assertEquals(Set.of("TG001", "TG002", "TG003", "TG004", "TG005", "TG006", "TG007"),
                 result.metrics().violations().keySet());
         assertEquals(Set.of(
                         "rest_client:success", "rest_client:failure",
