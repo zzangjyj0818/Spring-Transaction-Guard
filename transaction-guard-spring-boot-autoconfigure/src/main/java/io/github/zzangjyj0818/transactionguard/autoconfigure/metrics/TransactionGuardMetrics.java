@@ -25,6 +25,9 @@ public final class TransactionGuardMetrics implements TransactionObservationList
     public static final String REDIS_TOTAL = "transaction.guard.redis.total";
     public static final String KAFKA_PRODUCER_DURATION = "transaction.guard.kafka.producer.duration";
     public static final String KAFKA_PRODUCER_TOTAL = "transaction.guard.kafka.producer.total";
+    public static final String JDBC_QUERY_TOTAL = "transaction.guard.jdbc.query.total";
+    public static final String JDBC_QUERY_FAILURE_TOTAL = "transaction.guard.jdbc.query.failure.total";
+    public static final String JDBC_QUERY_DURATION = "transaction.guard.jdbc.query.duration";
 
     private final MeterRegistry registry;
 
@@ -65,6 +68,12 @@ public final class TransactionGuardMetrics implements TransactionObservationList
             registry.timer(KAFKA_PRODUCER_DURATION, tags)
                     .record(call.durationNanos(), TimeUnit.NANOSECONDS);
             registry.counter(KAFKA_PRODUCER_TOTAL, tags).increment();
+        }
+        if (snapshot.jdbcQueries().queryCount() > 0) {
+            registry.counter(JDBC_QUERY_TOTAL).increment(snapshot.jdbcQueries().queryCount());
+            registry.counter(JDBC_QUERY_FAILURE_TOTAL).increment(snapshot.jdbcQueries().failedQueryCount());
+            registry.timer(JDBC_QUERY_DURATION).record(
+                    snapshot.jdbcQueries().totalDurationNanos(), TimeUnit.NANOSECONDS);
         }
     }
 

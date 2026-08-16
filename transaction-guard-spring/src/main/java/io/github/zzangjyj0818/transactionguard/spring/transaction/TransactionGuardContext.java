@@ -3,6 +3,7 @@ package io.github.zzangjyj0818.transactionguard.spring.transaction;
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.RedisOperationObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.KafkaProducerObservation;
+import io.github.zzangjyj0818.transactionguard.core.model.JdbcQueryObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionEntryPoint;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionOutcome;
 import io.github.zzangjyj0818.transactionguard.core.model.TransactionSnapshot;
@@ -22,6 +23,9 @@ public final class TransactionGuardContext {
     private final List<ExternalCallObservation> externalCalls = new ArrayList<>();
     private final List<RedisOperationObservation> redisOperations = new ArrayList<>();
     private final List<KafkaProducerObservation> kafkaProducerCalls = new ArrayList<>();
+    private long jdbcQueryCount;
+    private long jdbcFailedQueryCount;
+    private long jdbcTotalDurationNanos;
 
     TransactionGuardContext(
             String transactionId,
@@ -88,6 +92,13 @@ public final class TransactionGuardContext {
         kafkaProducerCalls.add(Objects.requireNonNull(observation, "observation must not be null"));
     }
 
+    /** Records one JDBC statement execution without retaining SQL or parameters. */
+    public synchronized void recordJdbcQuery(long durationNanos, boolean failed) {
+        jdbcQueryCount++;
+        if (failed) jdbcFailedQueryCount++;
+        jdbcTotalDurationNanos += Math.max(0, durationNanos);
+    }
+
     TransactionSnapshot snapshot(long completedAtNanos, TransactionOutcome outcome) {
         long elapsedNanos = completedAtNanos >= startedAtNanos
                 ? completedAtNanos - startedAtNanos
@@ -99,7 +110,12 @@ public final class TransactionGuardContext {
                 outcome,
                 externalCalls,
                 redisOperations,
-                kafkaProducerCalls
+                kafkaProducerCalls,
+                jdbcObservation()
         );
+    }
+
+    private synchronized JdbcQueryObservation jdbcObservation() {
+        return new JdbcQueryObservation(jdbcQueryCount, jdbcFailedQueryCount, jdbcTotalDurationNanos);
     }
 }

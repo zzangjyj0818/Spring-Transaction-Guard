@@ -24,9 +24,12 @@ import io.github.zzangjyj0818.transactionguard.spring.redis.TransactionGuardRedi
 import io.github.zzangjyj0818.transactionguard.spring.redis.TransactionGuardRedisRecorder;
 import io.github.zzangjyj0818.transactionguard.spring.kafka.TransactionGuardKafkaAspect;
 import io.github.zzangjyj0818.transactionguard.spring.kafka.TransactionGuardKafkaRecorder;
+import io.github.zzangjyj0818.transactionguard.spring.jdbc.TransactionGuardJdbcAspect;
+import io.github.zzangjyj0818.transactionguard.spring.jdbc.TransactionGuardJdbcRecorder;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -35,6 +38,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.function.Supplier;
+import javax.sql.DataSource;
 
 /** Spring Boot auto-configuration for imperative transaction observation. */
 @AutoConfiguration
@@ -184,6 +188,25 @@ public class TransactionGuardAutoConfiguration {
             havingValue = "true", matchIfMissing = true)
     TransactionGuardKafkaAspect transactionGuardKafkaAspect(TransactionGuardKafkaRecorder recorder) {
         return new TransactionGuardKafkaAspect(recorder);
+    }
+
+    /** Creates aggregate JDBC observation when a DataSource is available. */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(DataSource.class)
+    @ConditionalOnProperty(prefix = "transaction-guard.jdbc", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardJdbcRecorder transactionGuardJdbcRecorder(TransactionGuardContextRegistry registry) {
+        return new TransactionGuardJdbcRecorder(registry);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(DataSource.class)
+    @ConditionalOnProperty(prefix = "transaction-guard.jdbc", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    TransactionGuardJdbcAspect transactionGuardJdbcAspect(TransactionGuardJdbcRecorder recorder) {
+        return new TransactionGuardJdbcAspect(recorder);
     }
 
     /** Creates the configured default Reporter unless the application supplies one. */
