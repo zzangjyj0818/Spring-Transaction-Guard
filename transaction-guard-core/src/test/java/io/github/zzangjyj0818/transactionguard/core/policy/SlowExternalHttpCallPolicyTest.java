@@ -36,4 +36,13 @@ class SlowExternalHttpCallPolicyTest {
         assertThrows(IllegalArgumentException.class,
                 () -> new SlowExternalHttpCallPolicy(Duration.ofNanos(-1)));
     }
+
+    @Test
+    void skipsSlowCallsRejectedByCandidatePredicate() {
+        SlowExternalHttpCallPolicy filtered = new SlowExternalHttpCallPolicy(
+                Duration.ZERO, call -> false);
+
+        assertEquals(0, filtered.evaluate(snapshot(
+                Duration.ofSeconds(1), List.of(externalCall(1)))).size());
+    }
 }

@@ -11,11 +11,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 /** Produces TG003 for each external HTTP call exceeding the configured threshold. */
 public final class SlowExternalHttpCallPolicy implements TransactionGuardPolicy {
 
     private final Duration threshold;
+    private final Predicate<ExternalCallObservation> violationCandidate;
 
     /**
      * Creates a slow external HTTP call policy.
@@ -23,11 +25,21 @@ public final class SlowExternalHttpCallPolicy implements TransactionGuardPolicy 
      * @param threshold non-negative maximum external call duration
      */
     public SlowExternalHttpCallPolicy(Duration threshold) {
+        this(threshold, call -> true);
+    }
+
+    /** Creates a policy that evaluates only calls accepted by the predicate. */
+    public SlowExternalHttpCallPolicy(
+            Duration threshold,
+            Predicate<ExternalCallObservation> violationCandidate
+    ) {
         Objects.requireNonNull(threshold, "threshold must not be null");
         if (threshold.isNegative()) {
             throw new IllegalArgumentException("threshold must not be negative");
         }
         this.threshold = threshold;
+        this.violationCandidate = Objects.requireNonNull(
+                violationCandidate, "violationCandidate must not be null");
     }
 
     @Override
@@ -36,7 +48,7 @@ public final class SlowExternalHttpCallPolicy implements TransactionGuardPolicy 
         List<TransactionGuardViolation> violations = new ArrayList<>();
         long thresholdNanos = threshold.toNanos();
         for (ExternalCallObservation call : snapshot.externalCalls()) {
-            if (call.durationNanos() <= thresholdNanos) {
+            if (!violationCandidate.test(call) || call.durationNanos() <= thresholdNanos) {
                 continue;
             }
             Map<String, Object> attributes = new LinkedHashMap<>(ExternalHttpCallPolicy.attributes(call));

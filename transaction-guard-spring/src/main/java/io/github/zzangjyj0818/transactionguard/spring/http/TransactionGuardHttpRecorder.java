@@ -3,6 +3,7 @@ package io.github.zzangjyj0818.transactionguard.spring.http;
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallObservation;
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalCallOutcome;
 import io.github.zzangjyj0818.transactionguard.core.model.ExternalClientType;
+import io.github.zzangjyj0818.transactionguard.core.policy.ExternalCallRuleMatcher;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.MonotonicClock;
 import io.github.zzangjyj0818.transactionguard.spring.transaction.TransactionGuardContextRegistry;
 import org.springframework.http.HttpRequest;
@@ -15,6 +16,7 @@ public final class TransactionGuardHttpRecorder {
     private final TransactionGuardContextRegistry contextRegistry;
     private final MonotonicClock clock;
     private final ExternalCallUriSanitizer uriSanitizer;
+    private final ExternalCallRuleMatcher ruleMatcher;
 
     /**
      * Creates a recorder using the system monotonic clock.
@@ -22,17 +24,27 @@ public final class TransactionGuardHttpRecorder {
      * @param contextRegistry transaction context registry
      */
     public TransactionGuardHttpRecorder(TransactionGuardContextRegistry contextRegistry) {
-        this(contextRegistry, MonotonicClock.system(), new ExternalCallUriSanitizer());
+        this(contextRegistry, ExternalCallRuleMatcher.none());
+    }
+
+    /** Creates a recorder with configured destination rules. */
+    public TransactionGuardHttpRecorder(
+            TransactionGuardContextRegistry contextRegistry,
+            ExternalCallRuleMatcher ruleMatcher
+    ) {
+        this(contextRegistry, MonotonicClock.system(), new ExternalCallUriSanitizer(), ruleMatcher);
     }
 
     TransactionGuardHttpRecorder(
             TransactionGuardContextRegistry contextRegistry,
             MonotonicClock clock,
-            ExternalCallUriSanitizer uriSanitizer
+            ExternalCallUriSanitizer uriSanitizer,
+            ExternalCallRuleMatcher ruleMatcher
     ) {
         this.contextRegistry = Objects.requireNonNull(contextRegistry, "contextRegistry must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         this.uriSanitizer = Objects.requireNonNull(uriSanitizer, "uriSanitizer must not be null");
+        this.ruleMatcher = Objects.requireNonNull(ruleMatcher, "ruleMatcher must not be null");
     }
 
     /**
@@ -94,7 +106,7 @@ public final class TransactionGuardHttpRecorder {
         Objects.requireNonNull(request, "request must not be null");
         contextRegistry.currentContext().ifPresent(context -> {
             ExternalCallUriSanitizer.SanitizedDestination destination = uriSanitizer.sanitize(request.getURI());
-            context.addExternalCall(new ExternalCallObservation(
+            ExternalCallObservation observation = new ExternalCallObservation(
                     ExternalClientType.REST_CLIENT,
                     request.getMethod().name(),
                     destination.host(),
@@ -102,7 +114,10 @@ public final class TransactionGuardHttpRecorder {
                     Math.max(0, durationNanos),
                     outcome,
                     exceptionType
-            ));
+            );
+            if (!ruleMatcher.isIgnored(observation)) {
+                context.addExternalCall(observation);
+            }
         });
     }
 }

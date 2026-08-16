@@ -1,6 +1,7 @@
 package io.github.zzangjyj0818.transactionguard.autoconfigure;
 
 import io.github.zzangjyj0818.transactionguard.core.policy.ExternalHttpCallPolicy;
+import io.github.zzangjyj0818.transactionguard.core.policy.ExternalCallRuleMatcher;
 import io.github.zzangjyj0818.transactionguard.core.policy.LongTransactionPolicy;
 import io.github.zzangjyj0818.transactionguard.core.policy.SlowExternalHttpCallPolicy;
 import io.github.zzangjyj0818.transactionguard.core.policy.TransactionGuardPolicy;
@@ -66,11 +67,14 @@ public class TransactionGuardAutoConfiguration {
     @ConditionalOnMissingBean(name = "transactionGuardExternalHttpCallPolicy")
     @ConditionalOnProperty(
             prefix = "transaction-guard.external-call", name = "enabled", havingValue = "true", matchIfMissing = true)
-    TransactionGuardPolicy transactionGuardExternalHttpCallPolicy(TransactionGuardProperties properties) {
+    TransactionGuardPolicy transactionGuardExternalHttpCallPolicy(
+            TransactionGuardProperties properties,
+            ExternalCallRuleMatcher ruleMatcher
+    ) {
         return configuredPolicy(
                 properties,
                 TransactionGuardProperties.ViolationCode.TG002,
-                ExternalHttpCallPolicy::new);
+                () -> new ExternalHttpCallPolicy(call -> !ruleMatcher.isAllowed(call)));
     }
 
     /** Creates the TG003 policy using the configured external call threshold. */
@@ -78,11 +82,16 @@ public class TransactionGuardAutoConfiguration {
     @ConditionalOnMissingBean(name = "transactionGuardSlowExternalHttpCallPolicy")
     @ConditionalOnProperty(
             prefix = "transaction-guard.external-call", name = "enabled", havingValue = "true", matchIfMissing = true)
-    TransactionGuardPolicy transactionGuardSlowExternalHttpCallPolicy(TransactionGuardProperties properties) {
+    TransactionGuardPolicy transactionGuardSlowExternalHttpCallPolicy(
+            TransactionGuardProperties properties,
+            ExternalCallRuleMatcher ruleMatcher
+    ) {
         return configuredPolicy(
                 properties,
                 TransactionGuardProperties.ViolationCode.TG003,
-                () -> new SlowExternalHttpCallPolicy(properties.getExternalCall().getSlowThreshold()));
+                () -> new SlowExternalHttpCallPolicy(
+                        properties.getExternalCall().getSlowThreshold(),
+                        call -> !ruleMatcher.isAllowed(call)));
     }
 
     /** Creates the configured default Reporter unless the application supplies one. */
@@ -122,8 +131,11 @@ public class TransactionGuardAutoConfiguration {
     @ConditionalOnClass(RestClient.class)
     @ConditionalOnProperty(
             prefix = "transaction-guard.external-call", name = "enabled", havingValue = "true", matchIfMissing = true)
-    TransactionGuardHttpRecorder transactionGuardHttpRecorder(TransactionGuardContextRegistry registry) {
-        return new TransactionGuardHttpRecorder(registry);
+    TransactionGuardHttpRecorder transactionGuardHttpRecorder(
+            TransactionGuardContextRegistry registry,
+            ExternalCallRuleMatcher ruleMatcher
+    ) {
+        return new TransactionGuardHttpRecorder(registry, ruleMatcher);
     }
 
     /** Creates the RestClient interceptor when external call observation is enabled. */
@@ -158,6 +170,18 @@ public class TransactionGuardAutoConfiguration {
             TransactionGuardRestClientConfigurer configurer
     ) {
         return new TransactionGuardRestClientCustomizer(configurer);
+    }
+
+    /** Compiles client-neutral ignore and allow rules once during startup. */
+    @Bean
+    @ConditionalOnMissingBean
+    ExternalCallRuleMatcher transactionGuardExternalCallRuleMatcher(TransactionGuardProperties properties) {
+        TransactionGuardProperties.ExternalCall externalCall = properties.getExternalCall();
+        return new ExternalCallRuleMatcher(
+                externalCall.getIgnoreHosts(),
+                externalCall.getIgnoreEndpoints(),
+                externalCall.getAllowHosts(),
+                externalCall.getAllowEndpoints());
     }
 
     private static TransactionGuardPolicy configuredPolicy(
