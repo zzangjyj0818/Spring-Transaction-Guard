@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.github.zzangjyj0818"
-version = "0.3.0-SNAPSHOT"
+version = "0.4.0"
 
 val springBootVersion = "4.1.0"
 val openFeignVersion = "13.13"
